@@ -20,32 +20,38 @@
 
 ## Docker 快速部署（推荐，拉下来即可用）
 
-适用于已有一台 Linux 服务器、希望整套服务（`api` / `worker` / `postgres` / `redis` / `qdrant` / `nginx`）一起跑的场景。**注意**：嵌入模型 `model/bge-base-zh-v1.5`（~400 MB）不在 git 仓库里，需要额外用脚本下载；`public/screenshots/` 里视频关键帧也不入库，属于运行产物。
+适用于已有一台 Linux 服务器、希望整套服务（`api` / `worker` / `postgres` / `redis` / `qdrant` / `nginx`）一起跑的场景。
+
+**重要概念：嵌入模型不打进镜像**  
+`model/bge-base-zh-v1.5`（~400 MB）既**不在 git 仓库里**，也**不在 Docker 镜像里**。`api` / `worker` 两个容器通过 bind mount 使用**宿主机**上的同一份模型目录（路径由 `.env` 里的 `HOST_MODEL_DIR` 指定，默认 `./model/bge-base-zh-v1.5`，即相对 `docker-compose.yml` 所在目录）。部署前需要确保**服务器上**这个目录里有 `pytorch_model.bin` 等文件。
 
 ```bash
 # 1. 拉代码
 git clone <your-repo-url> BeeEVAL
 cd BeeEVAL
 
-# 2. 下载嵌入模型（~400MB，不在 git 里，脚本会拉到 model/bge-base-zh-v1.5/）
-# Windows (PowerShell)
-.\scripts\download-model.ps1              # 国外网络
-.\scripts\download-model.ps1 -UseMirror   # 国内走 hf-mirror.com
-# Linux / macOS
-./scripts/download-model.sh
-HF_ENDPOINT=https://hf-mirror.com ./scripts/download-model.sh   # 国内镜像
-
-# 3. 配环境变量（绝对不要把填好密钥的 .env.production 提交回 git！）
+# 2. 配环境变量（绝对不要把填好密钥的 .env.production 提交回 git！）
 cp .env.production.example .env.production
-# 用编辑器把里面所有 <REPLACE_ME_*> 改成真实值：
+# 编辑 .env.production，把所有 <REPLACE_ME_*> 换成真实值：
 #   DB_PASSWORD / REDIS_PASSWORD / QDRANT_API_KEY / LLM_API_KEY / NAS_TOKEN ...
+# HOST_MODEL_DIR 默认 ./model/bge-base-zh-v1.5，一般不用动。
 
-# 4. 部署（在本机，脚本会 npm build + tar + scp + 服务器 docker compose build/up）
+# 3. 下载一次嵌入模型
+#    3a) 本机跑下面的脚本，模型会落到 ./model/bge-base-zh-v1.5/
+#        Windows: .\scripts\download-model.ps1  (国内加 -UseMirror)
+#        Linux  : ./scripts/download-model.sh   (国内 HF_ENDPOINT=https://hf-mirror.com ./scripts/download-model.sh)
+#    3b) 然后把这份目录同步到服务器，放到 /data/beeeval/model/bge-base-zh-v1.5
+#        最省事：rsync -avP -e "ssh -p 22" ./model/ user@server:/data/beeeval/model/
+#        或者：直接在服务器上再跑一次 ./scripts/download-model.sh （建议用 hf-mirror）
+
+# 4. 部署（在本机，脚本会 npm build + tar + scp + 远端 docker compose build/up）
 # Windows (PowerShell)
 .\deploy.ps1 -ServerIP x.x.x.x -User your_user -Port 22
 # Linux / macOS
 ./deploy.sh x.x.x.x your_user 22
 ```
+
+> 部署脚本会在服务器上检查 `${HOST_MODEL_DIR}/pytorch_model.bin` 是否存在，不存在直接报错退出并提示怎么下，不会白构建一次镜像。
 
 部署完成后：
 

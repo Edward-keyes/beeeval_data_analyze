@@ -42,10 +42,8 @@ tar -czf $tarball `
     --exclude="*.pyc" `
     --exclude="api/venv" `
     --exclude="api/llm_logs" `
-    --exclude="model/bge-base-zh-v1.5/.git" `
     "api" `
     "public" `
-    "model/bge-base-zh-v1.5" `
     "dist" `
     "Dockerfile" `
     "docker-compose.production.yml" `
@@ -80,6 +78,31 @@ tar -xzf beeeval-deploy.tar.gz
 rm -f beeeval-deploy.tar.gz
 cp .env.production .env
 cp docker-compose.production.yml docker-compose.yml
+
+# Resolve HOST_MODEL_DIR exactly the same way docker-compose does.
+# Fail fast with a clear message if the model has not been placed yet.
+HOST_MODEL_DIR=$(grep -E "^HOST_MODEL_DIR=" .env | tail -n1 | cut -d= -f2-)
+HOST_MODEL_DIR=${HOST_MODEL_DIR:-./model/bge-base-zh-v1.5}
+case "$HOST_MODEL_DIR" in
+    /*) ABS_MODEL_DIR="$HOST_MODEL_DIR" ;;
+    *)  ABS_MODEL_DIR="/data/beeeval/${HOST_MODEL_DIR#./}" ;;
+esac
+if [ ! -f "${ABS_MODEL_DIR}/pytorch_model.bin" ]; then
+    cat >&2 <<MSG
+ERROR: embedding model not found at ${ABS_MODEL_DIR}
+       (expected pytorch_model.bin).
+Download it once on the server, e.g.:
+    cd /data/beeeval
+    pip install --user huggingface_hub
+    HF_ENDPOINT=https://hf-mirror.com \
+      python -m huggingface_hub snapshot-download BAAI/bge-base-zh-v1.5 \
+      --local-dir ./model/bge-base-zh-v1.5 --local-dir-use-symlinks False
+Then rerun this deploy.
+MSG
+    exit 1
+fi
+echo "  -> Embedding model OK: ${ABS_MODEL_DIR}"
+
 echo "  -> Building Docker images (first time ~5-10 min)..."
 docker compose build
 echo "  -> Starting services..."

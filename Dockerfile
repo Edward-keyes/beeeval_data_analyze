@@ -12,7 +12,10 @@ RUN pip install --no-cache-dir -r api/requirements.txt \
 
 COPY api/ /app/api/
 COPY public/ /app/public/
-COPY model/bge-base-zh-v1.5/ /app/model/bge-base-zh-v1.5/
+# NOTE: the embedding model (BAAI/bge-base-zh-v1.5, ~400 MB) is NOT
+# baked into the image -- it's mounted in via docker-compose as
+# ${HOST_MODEL_DIR}:/app/model/bge-base-zh-v1.5:ro. Download it once
+# per host using scripts/download-model.{sh,ps1}.
 
 ENV PYTHONPATH=/app
 ENV TZ=Asia/Shanghai

@@ -15,6 +15,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - QDRANT_URL=http://qdrant:6333
+      - EMBEDDING_MODEL_PATH=/app/model/bge-base-zh-v1.5
     depends_on:
       postgres:
         condition: service_healthy
@@ -23,6 +24,9 @@ services:
     volumes:
       - temp_files:/app/temp_files
       - screenshots:/app/public/screenshots
+      # Mount the embedding model from the host (download once via
+      # scripts/download-model.{sh,ps1}); the image no longer bakes it in.
+      - ${HOST_MODEL_DIR:-./model/bge-base-zh-v1.5}:/app/model/bge-base-zh-v1.5:ro
     restart: unless-stopped
 
   # ───── Celery Worker ─────
@@ -37,6 +41,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - QDRANT_URL=http://qdrant:6333
+      - EMBEDDING_MODEL_PATH=/app/model/bge-base-zh-v1.5
     depends_on:
       postgres:
         condition: service_healthy
@@ -45,7 +50,7 @@ services:
     volumes:
       - temp_files:/app/temp_files
       - screenshots:/app/public/screenshots
-      - ${EMBEDDING_MODEL_PATH:-./model/bge-base-zh-v1.5}:/app/model/bge-base-zh-v1.5:ro
+      - ${HOST_MODEL_DIR:-./model/bge-base-zh-v1.5}:/app/model/bge-base-zh-v1.5:ro
     restart: unless-stopped
 
   # ───── Redis ─────

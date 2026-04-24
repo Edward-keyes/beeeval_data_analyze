@@ -36,22 +36,40 @@ class RagService:
         self._ensure_collection()
 
     def _ensure_collection(self):
-        """确保集合存在，不存在则创建"""
+        """确保集合存在，不存在则创建
+
+        注意：uvicorn 多 worker / 多进程场景下，多个实例可能同时到达这里，
+        先后都看到 exists=False 然后并发调用 create_collection，只有先到的
+        会成功，后到的会拿到 409 Conflict。这里把 409 / "already exists"
+        当成幂等成功处理，避免启动挂掉。
+        """
         try:
             collections = self.client.get_collections().collections
             exists = any(c.name == self.collection_name for c in collections)
-
-            if not exists:
-                logger.info(f"Creating collection: {self.collection_name}")
-                self.client.create_collection(
-                    collection_name=self.collection_name,
-                    vectors_config=VectorParams(size=self.dimension, distance=Distance.COSINE)
-                )
-                logger.info(f"Collection '{self.collection_name}' created successfully")
-            else:
-                logger.info(f"Collection '{self.collection_name}' already exists")
         except Exception as e:
-            logger.error(f"Failed to ensure collection: {e}")
+            logger.error(f"Failed to list Qdrant collections: {e}")
+            raise
+
+        if exists:
+            logger.info(f"Collection '{self.collection_name}' already exists")
+            return
+
+        logger.info(f"Creating collection: {self.collection_name}")
+        try:
+            self.client.create_collection(
+                collection_name=self.collection_name,
+                vectors_config=VectorParams(size=self.dimension, distance=Distance.COSINE)
+            )
+            logger.info(f"Collection '{self.collection_name}' created successfully")
+        except Exception as e:
+            msg = str(e).lower()
+            if "already exists" in msg or "409" in msg or "conflict" in msg:
+                logger.info(
+                    f"Collection '{self.collection_name}' was created concurrently "
+                    f"by another worker, treating as success."
+                )
+                return
+            logger.error(f"Failed to create collection: {e}")
             raise
 
     def add_evaluations(self, evaluations: list[dict]) -> int:
