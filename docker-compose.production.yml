@@ -1,0 +1,156 @@
+version: "3.8"
+
+services:
+  # ───── API Server ─────
+  api:
+    build:
+      context: .
+      target: api
+    container_name: beeeval-api
+    env_file: .env
+    environment:
+      - DB_HOST=postgres
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - EMBEDDING_MODEL_PATH=/app/model/bge-base-zh-v1.5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      qdrant:
+        condition: service_started
+    volumes:
+      - temp_files:/app/temp_files
+      - screenshots:/app/public/screenshots
+    networks:
+      - beeeval-net
+    restart: unless-stopped
+
+  # ───── Celery Worker ─────
+  worker:
+    build:
+      context: .
+      target: worker
+    container_name: beeeval-worker
+    env_file: .env
+    environment:
+      - DB_HOST=postgres
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - EMBEDDING_MODEL_PATH=/app/model/bge-base-zh-v1.5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - temp_files:/app/temp_files
+      - screenshots:/app/public/screenshots
+    networks:
+      - beeeval-net
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    restart: unless-stopped
+
+  # ───── Redis ─────
+  # Bound to 127.0.0.1 so only SSH-tunneled local-dev workers can reach it.
+  # Public scanners can't see it; only people with a shell on this server can.
+  redis:
+    image: redis:7-alpine
+    container_name: beeeval-redis
+    command: >
+      redis-server
+        --appendonly yes
+        --maxmemory 256mb
+        --maxmemory-policy allkeys-lru
+        --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - beeeval-net
+    restart: unless-stopped
+
+  # ───── PostgreSQL ─────
+  # Bound to 127.0.0.1 so only SSH-tunneled clients can reach it (not public).
+  postgres:
+    # Keep in sync with your dev machine major version so pg_dump -Fc / pg_restore match.
+    # Upgrading 16→17 requires a NEW volume (or pg_upgrade); see docs/deployment-guide.md.
+    image: postgres:17-alpine
+    container_name: beeeval-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-beeeval}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-beeeval}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    command: >
+      postgres
+        -c max_connections=100
+        -c shared_buffers=256MB
+        -c work_mem=16MB
+    networks:
+      - beeeval-net
+    restart: unless-stopped
+
+  # ───── Qdrant ─────
+  # Bound to 127.0.0.1 so only SSH-tunneled clients can reach it (not public).
+  qdrant:
+    image: qdrant/qdrant
+    container_name: beeeval-qdrant
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY must be set}
+      # Large collection snapshots (multipart upload) exceed default 32 MiB body limit.
+      QDRANT__SERVICE__MAX_REQUEST_SIZE_MB: 1024
+      # Allow long-running snapshot upload / recover on slow disks or large files.
+      QDRANT__SERVICE__HTTP_CLIENT_REQUEST_TIMEOUT_SEC: 7200
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+      - qdrant_snapshots:/qdrant/snapshots
+    networks:
+      - beeeval-net
+    restart: unless-stopped
+
+  # ───── Nginx (前端 + 反向代理) ─────
+  nginx:
+    image: nginx:alpine
+    container_name: beeeval-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./dist:/usr/share/nginx/html:ro
+    depends_on:
+      - api
+    networks:
+      - beeeval-net
+    restart: unless-stopped
+
+networks:
+  beeeval-net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redis_data:
+  qdrant_data:
+  qdrant_snapshots:
+  temp_files:
+  screenshots:

@@ -1,0 +1,32 @@
+{
+  "video_path": "C:/测试视频/4064-小米Yu7-HyperOS1.10.0-娱乐域-Good.mp4",
+  "asr_model": "funasr",
+  "timestamp": "2026-03-17T11:12:15.563350",
+  "metrics": {
+    "audio_extract_time_sec": 0.765,
+    "transcription_time_sec": 28.221,
+    "total_duration_sec": 28.985,
+    "text_length": 71,
+    "words_count": 2,
+    "rtf": 1.1604,
+    "audio_duration_sec": 24.32
+  },
+  "transcript": {
+    "full_text": "小爱同学在推荐一些适合在健身房听的音乐，jordan beats的power节奏强劲，每一步踩都燃起斗志，汗水与节拍共振，让坚持变得更有力量。",
+    "segments": [
+      {
+        "start": 0.54,
+        "end": 0.72,
+        "text": "小爱同学在推荐一些适合在健身房听的音乐，jordan"
+      },
+      {
+        "start": 0.72,
+        "end": 0.9,
+        "text": "beats的power节奏强劲，每一步踩都燃起斗志，汗水与节拍共振，让坚持变得更有力量。"
+      }
+    ],
+    "language": "zh",
+    "segment_count": 2
+  },
+  "error": null
+}

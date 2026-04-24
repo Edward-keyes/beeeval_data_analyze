@@ -1,0 +1,114 @@
+version: "3.8"
+
+services:
+  # ───── API Server ─────
+  api:
+    build:
+      context: .
+      target: api
+    container_name: beeeval-api
+    ports:
+      - "8004:8004"
+    env_file: .env
+    environment:
+      - DB_HOST=postgres
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - temp_files:/app/temp_files
+      - screenshots:/app/public/screenshots
+    restart: unless-stopped
+
+  # ───── Celery Worker ─────
+  worker:
+    build:
+      context: .
+      target: worker
+    container_name: beeeval-worker
+    env_file: .env
+    environment:
+      - DB_HOST=postgres
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - temp_files:/app/temp_files
+      - screenshots:/app/public/screenshots
+      - ${EMBEDDING_MODEL_PATH:-./model/bge-base-zh-v1.5}:/app/model/bge-base-zh-v1.5:ro
+    restart: unless-stopped
+
+  # ───── Redis ─────
+  redis:
+    image: redis:7-alpine
+    container_name: beeeval-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  # ───── PostgreSQL ─────
+  postgres:
+    image: postgres:17-alpine
+    container_name: beeeval-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${DB_NAME:-beeeval}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-123456}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-beeeval}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    command: >
+      postgres
+        -c max_connections=100
+        -c shared_buffers=256MB
+        -c work_mem=16MB
+    restart: unless-stopped
+
+  # ───── Qdrant ─────
+  qdrant:
+    image: qdrant/qdrant
+    container_name: beeeval-qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+
+  # ───── Nginx (frontend + reverse proxy) ─────
+  nginx:
+    image: nginx:alpine
+    container_name: beeeval-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./dist:/usr/share/nginx/html:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redis_data:
+  qdrant_data:
+  temp_files:
+  screenshots:

@@ -1,0 +1,153 @@
+Looking in indexes: https://pypi.tuna.tsinghua.edu.cn/simple
+Collecting funasr
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/57/89/61c09967f0f4f091402367215000c3c060bfeaadbbdc9aca42856d299c95/funasr-1.3.1-py3-none-any.whl (811 kB)
+     ---------------------------------------- 812.0/812.0 kB 4.4 MB/s  0:00:00
+Collecting modelscope
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/2a/82/cfdc5d8a8b16900d5475d7c463f219392a826fe236da678ca1b2d3a768f3/modelscope-1.35.0-py3-none-any.whl (6.1 MB)
+     ---------------------------------------- 6.1/6.1 MB 3.7 MB/s  0:00:01
+Collecting scipy>=1.4.1 (from funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/a2/84/dc08d77fbf3d87d3ee27f6a0c6dcce1de5829a64f2eae85a0ecc1f0daa73/scipy-1.17.1-cp312-cp312-win_amd64.whl (36.5 MB)
+     ---------------------------------------- 36.5/36.5 MB 2.5 MB/s  0:00:14
+Collecting librosa (from funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/b5/ba/c63c5786dfee4c3417094c4b00966e61e4a63efecee22cb7b4c0387dda83/librosa-0.11.0-py3-none-any.whl (260 kB)
+Collecting jamo (from funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/ac/cc/49812faae67f9a24be6ddaf58a2cf7e8c3cbfcf5b762d9414f7103d2ea2c/jamo-0.4.1-py3-none-any.whl (9.5 kB)
+Collecting PyYAML>=5.1.2 (from funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/86/bf/899e81e4cce32febab4fb42bb97dcdf66bc135272882d1987881a4b519e9/pyyaml-6.0.3-cp312-cp312-win_amd64.whl (154 kB)
+Collecting soundfile>=0.12.1 (from funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/14/e9/6b761de83277f2f02ded7e7ea6f07828ec78e4b229b80e4ca55dd205b9dc/soundfile-0.13.1-py2.py3-none-win_amd64.whl (1.0 MB)
+     ---------------------------------------- 1.0/1.0 MB 2.2 MB/s  0:00:00
+Collecting kaldiio>=2.17.0 (from funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/ae/e3/6c3b42233225f398f7a72988b524f654ae818cca0d441db847a2761203e9/kaldiio-2.18.1-py3-none-any.whl (29 kB)
+Collecting torch-complex (from funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/f4/c5/9b4d756a7ada951e9b17dcc636f98ed1073c737ae809b150ef408afb6298/torch_complex-0.4.4-py3-none-any.whl (9.1 kB)
+Collecting sentencepiece (from funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/2d/81/92df5673c067148c2545b1bfe49adfd775bcc3a169a047f5a0e6575ddaca/sentencepiece-0.2.1-cp312-cp312-win_amd64.whl (1.1 MB)
+     ---------------------------------------- 1.1/1.1 MB 1.3 MB/s  0:00:00
+Collecting jieba (from funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/c6/cb/18eeb235f833b726522d7ebed54f2278ce28ba9438e3135ab0278d9792a2/jieba-0.42.1.tar.gz (19.2 MB)
+     ---------------------------------------- 19.2/19.2 MB 855.4 kB/s  0:00:22
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Collecting pytorch-wpe (from funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/23/de/c47967a11bfe68cb28d2f19e55c7027993c3721eba79813db65d245e4ced/pytorch_wpe-0.0.1-py3-none-any.whl (8.1 kB)
+Collecting editdistance>=0.5.2 (from funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/28/f0/65101e51dc7c850e7b7581a5d8fa8721a1d7479a0dca6c08386328e19882/editdistance-0.8.1-cp312-cp312-win_amd64.whl (79 kB)
+Collecting oss2 (from funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/df/b5/f2cb1950dda46ac2284d6c950489fdacd0e743c2d79a347924d3cc44b86f/oss2-2.19.1.tar.gz (298 kB)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Requirement already satisfied: tqdm in .\venv\Lib\site-packages (from funasr) (4.67.3)
+Collecting umap-learn (from funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/43/d2/fcf7192dd1cd8c090b6cfd53fa223c4fb2887a17c47e06bc356d44f40dfb/umap_learn-0.5.11-py3-none-any.whl (90 kB)
+Collecting jaconv (from funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/3b/da/9657d637bcacdbaf6a914ce504000da5639f9d945f8d3552a940f021d6c0/jaconv-0.5.0-py3-none-any.whl (16 kB)
+Collecting hydra-core>=1.3.2 (from funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/c6/50/e0edd38dcd63fb26a8547f13d28f7a008bc4a3fd4eb4ff030673f22ad41a/hydra_core-1.3.2-py3-none-any.whl (154 kB)
+Collecting tensorboardX (from funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/e0/1d/b5d63f1a6b824282b57f7b581810d20b7a28ca951f2d5b59f1eb0782c12b/tensorboardx-2.6.4-py3-none-any.whl (87 kB)
+Requirement already satisfied: requests in .\venv\Lib\site-packages (from funasr) (2.32.5)
+Requirement already satisfied: filelock in .\venv\Lib\site-packages (from modelscope) (3.24.3)
+Requirement already satisfied: setuptools in .\venv\Lib\site-packages (from modelscope) (82.0.0)
+Requirement already satisfied: urllib3>=1.26 in .\venv\Lib\site-packages (from modelscope) (1.26.20)
+Collecting omegaconf<2.4,>=2.2 (from hydra-core>=1.3.2->funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/e3/94/1843518e420fa3ed6919835845df698c7e27e183cb997394e4a670973a65/omegaconf-2.3.0-py3-none-any.whl (79 kB)
+Collecting antlr4-python3-runtime==4.9.* (from hydra-core>=1.3.2->funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/3e/38/7859ff46355f76f8d19459005ca000b6e7012f2f1ca597746cbcd1fbfe5e/antlr4-python3-runtime-4.9.3.tar.gz (117 kB)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Requirement already satisfied: packaging in .\venv\Lib\site-packages (from hydra-core>=1.3.2->funasr) (26.0)
+Requirement already satisfied: numpy in .\venv\Lib\site-packages (from kaldiio>=2.17.0->funasr) (2.4.2)
+Requirement already satisfied: charset_normalizer<4,>=2 in .\venv\Lib\site-packages (from requests->funasr) (3.4.4)
+Requirement already satisfied: idna<4,>=2.5 in .\venv\Lib\site-packages (from requests->funasr) (3.11)
+Requirement already satisfied: certifi>=2017.4.17 in .\venv\Lib\site-packages (from requests->funasr) (2026.2.25)
+Requirement already satisfied: cffi>=1.0 in .\venv\Lib\site-packages (from soundfile>=0.12.1->funasr) (2.0.0)
+Requirement already satisfied: pycparser in .\venv\Lib\site-packages (from cffi>=1.0->soundfile>=0.12.1->funasr) (3.0)
+Requirement already satisfied: colorama in .\venv\Lib\site-packages (from tqdm->funasr) (0.4.6)
+Collecting audioread>=2.1.9 (from librosa->funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/7e/16/fbe8e1e185a45042f7cd3a282def5bb8d95bb69ab9e9ef6a5368aa17e426/audioread-3.1.0-py3-none-any.whl (23 kB)
+Requirement already satisfied: numba>=0.51.0 in .\venv\Lib\site-packages (from librosa->funasr) (0.64.0)
+Collecting scikit-learn>=1.1.0 (from librosa->funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/9f/c4/0ab22726a04ede56f689476b760f98f8f46607caecff993017ac1b64aa5d/scikit_learn-1.8.0-cp312-cp312-win_amd64.whl (8.0 MB)
+     ---------------------------------------- 8.0/8.0 MB 1.0 MB/s  0:00:07
+Collecting joblib>=1.0 (from librosa->funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/7b/91/984aca2ec129e2757d1e4e3c81c3fcda9d0f85b74670a094cc443d9ee949/joblib-1.5.3-py3-none-any.whl (309 kB)
+Requirement already satisfied: decorator>=4.3.0 in .\venv\Lib\site-packages (from librosa->funasr) (4.4.2)
+Collecting pooch>=1.1 (from librosa->funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/2a/2d/d4bf65e47cea8ff2c794a600c4fd1273a7902f268757c531e0ee9f18aa58/pooch-1.9.0-py3-none-any.whl (67 kB)
+Collecting soxr>=0.3.2 (from librosa->funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/ce/04/530252227f4d0721a5524a936336485dfb429bb206a66baf8e470384f4a2/soxr-1.0.0-cp312-abi3-win_amd64.whl (172 kB)
+Requirement already satisfied: typing_extensions>=4.1.1 in .\venv\Lib\site-packages (from librosa->funasr) (4.15.0)
+Collecting lazy_loader>=0.1 (from librosa->funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/8a/a1/8d812e53a5da1687abb10445275d41a8b13adb781bbf7196ddbcf8d88505/lazy_loader-0.5-py3-none-any.whl (8.0 kB)
+Collecting msgpack>=1.0 (from librosa->funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/8c/ec/d431eb7941fb55a31dd6ca3404d41fbb52d99172df2e7707754488390910/msgpack-1.1.2-cp312-cp312-win_amd64.whl (72 kB)
+Requirement already satisfied: llvmlite<0.47,>=0.46.0dev0 in .\venv\Lib\site-packages (from numba>=0.51.0->librosa->funasr) (0.46.0)
+Requirement already satisfied: platformdirs>=2.5.0 in .\venv\Lib\site-packages (from pooch>=1.1->librosa->funasr) (4.9.4)
+Collecting threadpoolctl>=3.2.0 (from scikit-learn>=1.1.0->librosa->funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/32/d5/f9a850d79b0851d1d4ef6456097579a9005b31fea68726a4ae5f2d82ddd9/threadpoolctl-3.6.0-py3-none-any.whl (18 kB)
+Collecting crcmod>=1.7 (from oss2->funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/6b/b0/e595ce2a2527e169c3bcd6c33d2473c1918e0b7f6826a043ca1245dd4e5b/crcmod-1.7.tar.gz (89 kB)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Collecting pycryptodome>=3.4.7 (from oss2->funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/54/2f/e97a1b8294db0daaa87012c24a7bb714147c7ade7656973fd6c736b484ff/pycryptodome-3.23.0-cp37-abi3-win_amd64.whl (1.8 MB)
+     ---------------------------------------- 1.8/1.8 MB 757.0 kB/s  0:00:02
+Collecting aliyun-python-sdk-kms>=2.4.1 (from oss2->funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/11/5c/0132193d7da2c735669a1ed103b142fd63c9455984d48c5a88a1a516efaa/aliyun_python_sdk_kms-2.16.5-py2.py3-none-any.whl (99 kB)
+Collecting aliyun-python-sdk-core>=2.13.12 (from oss2->funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/3e/09/da9f58eb38b4fdb97ba6523274fbf445ef6a06be64b433693da8307b4bec/aliyun-python-sdk-core-2.16.0.tar.gz (449 kB)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Requirement already satisfied: six in .\venv\Lib\site-packages (from oss2->funasr) (1.17.0)
+Collecting jmespath<1.0.0,>=0.9.3 (from aliyun-python-sdk-core>=2.13.12->oss2->funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/07/cb/5f001272b6faeb23c1c9e0acc04d48eaaf5c862c17709d20e3469c6e0139/jmespath-0.10.0-py2.py3-none-any.whl (24 kB)
+Requirement already satisfied: cryptography>=3.0.0 in .\venv\Lib\site-packages (from aliyun-python-sdk-core>=2.13.12->oss2->funasr) (46.0.5)
+Requirement already satisfied: protobuf>=3.20 in .\venv\Lib\site-packages (from tensorboardX->funasr) (5.29.6)
+Collecting pynndescent>=0.5 (from umap-learn->funasr)
+  Downloading https://pypi.tuna.tsinghua.edu.cn/packages/b2/e6/94145d714402fd5ade00b5661f2d0ab981219e07f7db9bfa16786cdb9c04/pynndescent-0.6.0-py3-none-any.whl (73 kB)
+Building wheels for collected packages: antlr4-python3-runtime, jieba, oss2, aliyun-python-sdk-core, crcmod
+  Building wheel for antlr4-python3-runtime (pyproject.toml): started
+  Building wheel for antlr4-python3-runtime (pyproject.toml): finished with status 'done'
+  Created wheel for antlr4-python3-runtime: filename=antlr4_python3_runtime-4.9.3-py3-none-any.whl size=144614 sha256=58cbd52a0bb36859a29a7b901940cecca776e2930b303f4bc5a9cd8b4de43fab
+  Stored in directory: c:\users\cloud\appdata\local\pip\cache\wheels\31\58\36\73780dbf65711f21db7bcf174f41a65ef294c8f7c2d260910f
+  Building wheel for jieba (pyproject.toml): started
+  Building wheel for jieba (pyproject.toml): finished with status 'done'
+  Created wheel for jieba: filename=jieba-0.42.1-py3-none-any.whl size=19314527 sha256=5f2511d6ab025f0e7dbf20d2623cc9c849c120089e2832b139e3fbb2b0f5c556
+  Stored in directory: c:\users\cloud\appdata\local\pip\cache\wheels\7b\3a\3e\1bf625b8dd63d53265aad527b244647c679dff9b60588a324f
+  Building wheel for oss2 (pyproject.toml): started
+  Building wheel for oss2 (pyproject.toml): finished with status 'done'
+  Created wheel for oss2: filename=oss2-2.19.1-py3-none-any.whl size=124053 sha256=72234ce38465ba871705fe80a57c3e5673562cd35dab99b231589c10ab54e496
+  Stored in directory: c:\users\cloud\appdata\local\pip\cache\wheels\5e\48\fd\f8b122307dcd3a71027346ddcd3b1e32edba74a092ddecfbd6
+  Building wheel for aliyun-python-sdk-core (pyproject.toml): started
+  Building wheel for aliyun-python-sdk-core (pyproject.toml): finished with status 'done'
+  Created wheel for aliyun-python-sdk-core: filename=aliyun_python_sdk_core-2.16.0-py3-none-any.whl size=535435 sha256=b4e203ed5d31497845440fbd3746aa9664ae935d4f7b55cdb43abf46f3091472
+  Stored in directory: c:\users\cloud\appdata\local\pip\cache\wheels\1b\c1\4c\154692219884bdbf2ce74c25193f89e6ffd790ce882515244d
+  Building wheel for crcmod (pyproject.toml): started
+  Building wheel for crcmod (pyproject.toml): finished with status 'done'
+  Created wheel for crcmod: filename=crcmod-1.7-py3-none-any.whl size=18949 sha256=ab7be889783475a19e8ada54cfb525286ad8d50de12f436c44dbc6f476ff972e
+  Stored in directory: c:\users\cloud\appdata\local\pip\cache\wheels\8a\76\13\662de3a16f9e9356e2d443cce4635de07f200629df084d4fef
+Successfully built antlr4-python3-runtime jieba oss2 aliyun-python-sdk-core crcmod
+Installing collected packages: jieba, jamo, jaconv, crcmod, antlr4-python3-runtime, torch-complex, threadpoolctl, tensorboardX, soxr, sentencepiece, scipy, PyYAML, pytorch-wpe, pycryptodome, msgpack, lazy_loader, kaldiio, joblib, jmespath, editdistance, audioread, soundfile, scikit-learn, pooch, omegaconf, modelscope, pynndescent, librosa, hydra-core, aliyun-python-sdk-core, umap-learn, aliyun-python-sdk-kms, oss2, funasr
+
+Successfully installed PyYAML-6.0.3 aliyun-python-sdk-core-2.16.0 aliyun-python-sdk-kms-2.16.5 antlr4-python3-runtime-4.9.3 audioread-3.1.0 crcmod-1.7 editdistance-0.8.1 funasr-1.3.1 hydra-core-1.3.2 jaconv-0.5.0 jamo-0.4.1 jieba-0.42.1 jmespath-0.10.0 joblib-1.5.3 kaldiio-2.18.1 lazy_loader-0.5 librosa-0.11.0 modelscope-1.35.0 msgpack-1.1.2 omegaconf-2.3.0 oss2-2.19.1 pooch-1.9.0 pycryptodome-3.23.0 pynndescent-0.6.0 pytorch-wpe-0.0.1 scikit-learn-1.8.0 scipy-1.17.1 sentencepiece-0.2.1 soundfile-0.13.1 soxr-1.0.0 tensorboardX-2.6.4 threadpoolctl-3.6.0 torch-complex-0.4.4 umap-learn-0.5.11

@@ -1,0 +1,13 @@
+node_modules
+build
+dist
+.git
+.trae
+.log
+.figma
+*.mp4
+*.mov
+*.avi
+*.mkv
+__pycache__
+*.pyc

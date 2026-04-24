@@ -1,0 +1,67 @@
+{
+  "video_path": "C:/测试视频/4064-小米Yu7-HyperOS1.10.0-娱乐域-Good.mp4",
+  "asr_model": "whisper",
+  "timestamp": "2026-03-17T11:06:44.326842",
+  "metrics": {
+    "audio_extract_time_sec": 0.776,
+    "transcription_time_sec": 23.637,
+    "total_duration_sec": 24.414,
+    "text_length": 70,
+    "words_count": 4,
+    "rtf": 0.9719,
+    "audio_duration_sec": 24.32
+  },
+  "transcript": {
+    "full_text": "小艾同学在推荐一些适合在健身房听的音乐Jordan beats the power节奏强劲每一步踩都燃起斗志汗水与节拍共振让坚持变得更有力量",
+    "segments": [
+      {
+        "start": 0.48,
+        "end": 1.48,
+        "text": "小艾同学"
+      },
+      {
+        "start": 2.04,
+        "end": 2.32,
+        "text": "在"
+      },
+      {
+        "start": 2.32,
+        "end": 2.96,
+        "text": "推荐一些"
+      },
+      {
+        "start": 2.96,
+        "end": 4.84,
+        "text": "适合在健身房听的音乐"
+      },
+      {
+        "start": 9.56,
+        "end": 11.040000000000001,
+        "text": "Jordan beats the power"
+      },
+      {
+        "start": 11.040000000000001,
+        "end": 12.040000000000001,
+        "text": "节奏强劲"
+      },
+      {
+        "start": 12.32,
+        "end": 14.120000000000001,
+        "text": "每一步踩都燃起斗志"
+      },
+      {
+        "start": 14.32,
+        "end": 15.76,
+        "text": "汗水与节拍共振"
+      },
+      {
+        "start": 16.080000000000002,
+        "end": 17.88,
+        "text": "让坚持变得更有力量"
+      }
+    ],
+    "language": "zh",
+    "segment_count": 9
+  },
+  "error": null
+}

@@ -1,0 +1,275 @@
+import axios from 'axios';
+import { Video, AnalysisTask, TaskResults } from './types';
+import { BASE_URL, API_ENDPOINTS, getVideoStreamUrl, getNasStreamUrl } from './config';
+
+const api = axios.create({
+    baseURL: BASE_URL,
+});
+
+export const listVideos = async (folderPath: string): Promise<{ videos: Video[] }> => {
+    const response = await api.post(API_ENDPOINTS.LIST_VIDEOS, { folder_path: folderPath });
+    return response.data;
+};
+
+export const analyzeVideos = async (
+    folderPath: string,
+    videoNames: string[],
+    language: string = "zh",
+    asrModel: string = "whisper"
+): Promise<{ task_id: string }> => {
+    const response = await api.post(API_ENDPOINTS.ANALYZE_VIDEOS, {
+        folder_path: folderPath,
+        video_names: videoNames,
+        analysis_config: {
+            evaluation_criteria: ["accuracy", "response_time", "user_experience", "context_awareness", "safety"]
+        },
+        language: language,
+        asr_model: asrModel
+    });
+    return response.data;
+};
+
+export const getASRModels = async (): Promise<{ models: Array<{ value: string; label: string; description: string }>; default: string }> => {
+    const response = await api.get('/video/asr-models');
+    return response.data;
+};
+
+export const getResults = async (taskId: string, params?: { offset?: number; limit?: number; status?: string }): Promise<TaskResults & { total: number; offset: number; limit: number; failed_count: number }> => {
+    const response = await api.get(`${API_ENDPOINTS.GET_RESULTS}/${taskId}`, { params });
+    return response.data;
+};
+
+export const retryFailedVideos = async (taskId: string, asrModel: string = "whisper"): Promise<{ retried: number; task_id: string; message: string }> => {
+    const response = await api.post(`${API_ENDPOINTS.RETRY_FAILED}/${taskId}`, null, { params: { asr_model: asrModel } });
+    return response.data;
+};
+
+export const recoverStuckVideos = async (taskId: string, asrModel: string = "whisper"): Promise<{ recovered: number; task_id: string; message: string }> => {
+    const response = await api.post(`${API_ENDPOINTS.RECOVER_STUCK}/${taskId}`, null, { params: { asr_model: asrModel } });
+    return response.data;
+};
+
+export const forceCompleteTask = async (taskId: string): Promise<{ success: boolean; message: string; celery_purged?: number }> => {
+    const response = await api.post(`${API_ENDPOINTS.FORCE_COMPLETE}/${taskId}`);
+    return response.data;
+};
+
+export interface PaginatedResponse<T> {
+    data: T[];
+    total: number;
+    offset: number;
+    limit: number;
+}
+
+export const getTasks = async (params?: {
+    offset?: number;
+    limit?: number;
+}): Promise<PaginatedResponse<AnalysisTask>> => {
+    const response = await api.get(API_ENDPOINTS.GET_TASKS, { params });
+    return response.data;
+};
+
+export const getAllResults = async (params?: {
+    offset?: number;
+    limit?: number;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
+    vehicle_id?: string;
+    function_domain?: string;
+    brand_model?: string;
+    system_version?: string;
+    status?: string;
+    search?: string;
+}): Promise<PaginatedResponse<any>> => {
+    const response = await api.get(API_ENDPOINTS.GET_ALL_RESULTS, { params });
+    return response.data;
+};
+
+export const updateResult = async (id: string, data: any): Promise<void> => {
+    await api.put(`${API_ENDPOINTS.UPDATE_RESULT}/${id}`, data);
+};
+
+export const deleteResult = async (id: string): Promise<void> => {
+    await api.delete(`${API_ENDPOINTS.DELETE_RESULT}/${id}`);
+};
+
+export const deleteResultsBatch = async (ids: string[]): Promise<void> => {
+    await api.delete(API_ENDPOINTS.DELETE_RESULTS_BATCH, { data: { ids } });
+};
+
+export const deleteTasksBatch = async (ids: string[]): Promise<void> => {
+    await api.delete(API_ENDPOINTS.DELETE_TASKS_BATCH, { data: { ids } });
+};
+
+export const getFilterOptions = async (): Promise<{
+    brand_models: string[];
+    function_domains: string[];
+    system_versions: string[];
+}> => {
+    const response = await api.get(API_ENDPOINTS.FILTER_OPTIONS);
+    return response.data;
+};
+
+export const getAnalysisStatus = async (taskId: string): Promise<any> => {
+    const response = await api.get(`${API_ENDPOINTS.GET_STATUS}/${taskId}`);
+    return response.data;
+};
+
+export const chatQuery = async (query: string, language: string = "zh"): Promise<{ answer: string }> => {
+    const response = await api.post(API_ENDPOINTS.CHAT_QUERY, { query, language });
+    return response.data;
+};
+
+export const translateText = async (text: string, targetLang: string): Promise<{ original: string, translated: string }> => {
+    const response = await api.post(API_ENDPOINTS.TRANSLATE, { text, target_lang: targetLang });
+    return response.data;
+};
+
+export const getVideoUrl = (path: string): string => {
+    return getVideoStreamUrl(path);
+};
+
+// NAS API functions
+export interface NasItem {
+    name: string;
+    path: string;
+    is_dir: boolean;
+    size: number | null;
+    modified: number | null;
+    mime: string | null;
+    is_video: boolean;
+}
+
+export interface NasBrowseResponse {
+    current_path: string;
+    parent_path?: string;
+    total: number;
+    offset: number;
+    items: NasItem[];
+}
+
+export const getNasStatus = async (): Promise<{ available: boolean; root?: string; roots?: string[]; message?: string }> => {
+    const response = await api.get(API_ENDPOINTS.NAS_STATUS);
+    return response.data;
+};
+
+export const browseNas = async (params?: {
+    path?: string;
+    type?: string;
+    sort?: string;
+    order?: string;
+    offset?: number;
+}): Promise<NasBrowseResponse> => {
+    const response = await api.get(API_ENDPOINTS.NAS_BROWSE, { params });
+    return response.data;
+};
+
+export const searchNas = async (params: {
+    keyword: string;
+    path?: string;
+    depth?: number;
+    limit?: number;
+}): Promise<any> => {
+    const response = await api.get(API_ENDPOINTS.NAS_SEARCH, { params });
+    return response.data;
+};
+
+export const scanNasDirectory = async (nasPath: string): Promise<{
+    nas_path: string;
+    total_files: number;
+    video_files: number;
+    parsed_videos: any[];
+}> => {
+    const response = await api.post(API_ENDPOINTS.NAS_SCAN, { nas_path: nasPath });
+    return response.data;
+};
+
+export const analyzeNasVideos = async (
+    nasPaths: string[],
+    asrModel: string = "whisper"
+): Promise<{ task_id: string }> => {
+    const response = await api.post(API_ENDPOINTS.ANALYZE_NAS, {
+        nas_paths: nasPaths,
+        analysis_config: {
+            evaluation_criteria: ["accuracy", "response_time", "user_experience", "context_awareness", "safety"]
+        },
+        asr_model: asrModel,
+    });
+    return response.data;
+};
+
+export const getNasVideoUrl = (nasPath: string): string => {
+    return getNasStreamUrl(nasPath);
+};
+
+// RAG API functions
+export const vectorizeEvaluations = async (taskIds: string[]): Promise<{ vectorized_count: number; skipped_count: number; failed_count: number }> => {
+    const response = await api.post('/rag/vectorize', { task_ids: taskIds });
+    return response.data;
+};
+
+export const ragQuery = async (question: string, top_k: number = 20): Promise<{ answer: string; sources: any[] }> => {
+    const response = await api.post('/rag/query', { question, top_k });
+    return response.data;
+};
+
+export const getVectorStats = async (): Promise<{ total_vectors: number; dimension: number; collection_name: string }> => {
+    const response = await api.get('/rag/stats');
+    return response.data;
+};
+
+export const deleteVideoVectors = async (videoName: string): Promise<{ status: string; message: string }> => {
+    const response = await api.delete(`/rag/video/${encodeURIComponent(videoName)}`);
+    return response.data;
+};
+
+export interface VectorPoint {
+    id: string;
+    video_name: string;
+    user_question: string;
+    system_response: string;
+    summary: string;
+    evaluations: any[];
+    created_at: string;
+    case_id: string;
+    brand_model: string;
+    system_version: string;
+    function_domain: string;
+    scenario: string;
+    sequence: string;
+}
+
+export const listVectors = async (params?: {
+    offset?: string;
+    limit?: number;
+    video_name?: string;
+    brand_model?: string;
+    function_domain?: string;
+}): Promise<{ points: VectorPoint[]; next_offset: string | null; total: number }> => {
+    const response = await api.get(API_ENDPOINTS.RAG_VECTORS, { params });
+    return response.data;
+};
+
+export const getVectorFacets = async (): Promise<{
+    video_names: string[];
+    brand_models: string[];
+    function_domains: string[];
+}> => {
+    const response = await api.get(API_ENDPOINTS.RAG_FACETS);
+    return response.data;
+};
+
+export const deleteVectorsBatch = async (ids: string[]): Promise<{ status: string; deleted: number }> => {
+    const response = await api.post(API_ENDPOINTS.RAG_VECTORS_DELETE_BATCH, { ids });
+    return response.data;
+};
+
+export const clearVectors = async (): Promise<{ status: string; message: string }> => {
+    const response = await api.post(API_ENDPOINTS.RAG_VECTORS_CLEAR);
+    return response.data;
+};
+
+export const updateVector = async (pointId: string, payload: Partial<VectorPoint> & { re_embed?: boolean }): Promise<{ status: string; id: string; re_embedded: boolean }> => {
+    const response = await api.put(`${API_ENDPOINTS.RAG_VECTORS}/${pointId}`, payload);
+    return response.data;
+};
