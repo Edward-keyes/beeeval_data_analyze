@@ -7,6 +7,8 @@ ffmpeg-python==0.2.0
 moviepy==1.0.3
 funasr>=1.1.0
 modelscope>=1.9.0
+# 提供 `import whisper`（视频分析选择 Whisper ASR 时必需，PyPI 名：openai-whisper）
+openai-whisper>=20231117
 python-multipart==0.0.9
 httpx
 pydantic==2.6.1
