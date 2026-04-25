@@ -35,6 +35,9 @@ services:
       # scripts/download-model.sh). Override HOST_MODEL_DIR in .env
       # if you keep the model somewhere else on the server.
       - ${HOST_MODEL_DIR:-./model/bge-base-zh-v1.5}:/app/model/bge-base-zh-v1.5:ro
+      # Whisper 会把 medium.pt (~1.4GB) 缓存到 ~/.cache/whisper/。
+      # 用 named volume 持久化，避免重 build 镜像后丢、并让 api/worker 共享。
+      - whisper_cache:/root/.cache/whisper
     networks:
       - beeeval-net
     restart: unless-stopped
@@ -63,6 +66,8 @@ services:
       - screenshots:/app/public/screenshots
       # Same host-mounted model as the api container.
       - ${HOST_MODEL_DIR:-./model/bge-base-zh-v1.5}:/app/model/bge-base-zh-v1.5:ro
+      # 与 api 容器共享 whisper 模型缓存，避免每个容器各下一遍。
+      - whisper_cache:/root/.cache/whisper
     networks:
       - beeeval-net
     deploy:
@@ -166,3 +171,4 @@ volumes:
   qdrant_snapshots:
   temp_files:
   screenshots:
+  whisper_cache:

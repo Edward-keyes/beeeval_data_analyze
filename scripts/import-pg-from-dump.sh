@@ -30,10 +30,24 @@ WORKER_CONTAINER="${WORKER_CONTAINER:-beeeval-worker}"
 DB_NAME="${DB_NAME:-beeeval}"
 DB_USER="${DB_USER:-postgres}"
 
-if [[ -z "${DUMP_FILE}" || ! -f "${DUMP_FILE}" ]]; then
+if [[ -z "${DUMP_FILE}" ]]; then
     echo "Usage: $0 <dump-file>"
     echo "  e.g.  $0 ./beeeval.dump"
     exit 1
+fi
+
+if [[ ! -f "${DUMP_FILE}" ]]; then
+    echo "ERROR: dump file not found: ${DUMP_FILE}"
+    echo "       工作目录: $(pwd)"
+    echo "       请先用 pg_dump / docker cp 把备份文件准备好，再传入正确路径。"
+    exit 1
+fi
+
+DUMP_SIZE=$(stat -c%s "${DUMP_FILE}" 2>/dev/null || stat -f%z "${DUMP_FILE}" 2>/dev/null || echo 0)
+if [[ "${DUMP_SIZE}" -lt 1024 ]]; then
+    echo "WARN: dump 文件 ${DUMP_FILE} 只有 ${DUMP_SIZE} 字节，看起来不像有效备份。"
+    echo "      如果确实只是想灌一份小测试 dump，请按回车继续，否则 Ctrl+C 退出。"
+    read -r _
 fi
 
 echo "==> 1/5 检查 PG 容器存活"
@@ -71,26 +85,37 @@ case "${DUMP_FILE}" in
 esac
 
 echo "==> 5/5 校正 SERIAL 序列，避免后续 INSERT 撞 id"
+# 目前只有 evaluation_scores.id 是 SERIAL；用一段固定的表名 + 列名清单驱动，
+# 避免之前那种把序列名当表名传给 EXECUTE 的低级错误。
 docker exec -i "${PG_CONTAINER}" \
     psql -U "${DB_USER}" -d "${DB_NAME}" -v ON_ERROR_STOP=1 <<'SQL'
 DO $$
 DECLARE
+    rec RECORD;
     seq_name TEXT;
     max_id   BIGINT;
 BEGIN
-    -- 目前只有 evaluation_scores 是 SERIAL，但用通用写法兜住未来新增的。
-    FOR seq_name IN
-        SELECT pg_get_serial_sequence('evaluation_scores', 'id')
-        WHERE pg_get_serial_sequence('evaluation_scores', 'id') IS NOT NULL
+    FOR rec IN
+        SELECT * FROM (VALUES
+            ('evaluation_scores', 'id')
+            -- 未来再加 SERIAL 表的话，在这里追加一行 ('table_name', 'col_name')
+        ) AS t(tbl, col)
     LOOP
-        EXECUTE format('SELECT COALESCE(MAX(id), 0) FROM %I',
-                       split_part(seq_name, '.', 2)) INTO max_id;
+        seq_name := pg_get_serial_sequence(rec.tbl, rec.col);
+        IF seq_name IS NULL THEN
+            RAISE NOTICE '% has no SERIAL sequence on %, skip', rec.tbl, rec.col;
+            CONTINUE;
+        END IF;
+
+        EXECUTE format('SELECT COALESCE(MAX(%I), 0) FROM %I', rec.col, rec.tbl)
+            INTO max_id;
+
         IF max_id > 0 THEN
             PERFORM setval(seq_name, max_id, true);
-            RAISE NOTICE 'setval(%, %, true)', seq_name, max_id;
+            RAISE NOTICE 'setval(%, %, true)  -- table %', seq_name, max_id, rec.tbl;
         ELSE
             PERFORM setval(seq_name, 1, false);
-            RAISE NOTICE 'setval(%, 1, false)  -- empty table', seq_name;
+            RAISE NOTICE 'setval(%, 1, false)  -- empty table %', seq_name, rec.tbl;
         END IF;
     END LOOP;
 END $$;
