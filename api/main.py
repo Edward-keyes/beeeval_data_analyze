@@ -27,10 +27,28 @@ load_dotenv()
 
 app = FastAPI(title="BeeEVAL API", description="Backend for BeeEVAL Video Analysis Tool")
 
-# CORS configuration
+# CORS：浏览器在「A 域页面里请求 B 域 API」时会先发 OPTIONS 并检查响应头。
+# allow_origins 必须列出**官网/嵌入页的完整源**（含协议+域名+端口），不能用 * 与
+# allow_credentials=True 同用。生产环境在 .env 里设 CORS_ORIGINS=逗号分隔的多个源。
+def _cors_origins() -> list[str]:
+    default = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+    extra = [x.strip() for x in (os.getenv("CORS_ORIGINS", "") or "").split(",") if x.strip()]
+    seen: set[str] = set()
+    out: list[str] = []
+    for o in default + extra:
+        if o not in seen:
+            seen.add(o)
+            out.append(o)
+    return out
+
+
+_cors = _cors_origins()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "*"],
+    allow_origins=_cors,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

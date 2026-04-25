@@ -33,6 +33,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+$gitCmd = Get-Command git -ErrorAction SilentlyContinue
+if (-not $gitCmd) {
+    throw "系统找不到 git。请安装 Git for Windows 并确保 PATH 中有 git，重新打开 PowerShell 后再试(Get-Command git 可自测)。"
+}
+
 # Paths that must never be tracked. Keep in sync with .gitignore.
 $paths = @(
     # secrets
@@ -91,12 +96,18 @@ if ($Apply) {
 }
 Write-Host "========================================" -ForegroundColor Cyan
 
-# Sanity: make sure we're at a git repo root.
-$gitDir = & git rev-parse --show-toplevel 2>$null
-if (-not $gitDir -or $LASTEXITCODE -ne 0) {
+# 解析仓库根(与当前 .git 一致)，用 LiteralPath 避免 Windows 路径歧义
+$gitDir = (& git rev-parse --show-toplevel 2>$null | Select-Object -First 1)
+if ($LASTEXITCODE -ne 0 -or -not $gitDir) {
     throw "Not inside a git repo. Run this from the BeeEVAL repo root."
 }
-Set-Location $gitDir
+$gitDir = $gitDir.Trim()
+try {
+    $gitDir = (Resolve-Path -LiteralPath $gitDir).Path
+} catch {
+    throw "无法解析 git 根目录: $gitDir  ($_)"
+}
+Set-Location -LiteralPath $gitDir
 Write-Host "Repo root: $gitDir" -ForegroundColor Gray
 
 $removed = 0

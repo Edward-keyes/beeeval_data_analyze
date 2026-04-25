@@ -6,13 +6,14 @@
  */
 
 // Backend API base URL
-// For development with Vite proxy, use '/api'
-// For direct access, use full URL like 'http://localhost:8000/api'
-export const BASE_URL = '/api';
+// 开发：Vite 代理，用相对路径 '/api'
+// 生产或嵌入**其它域名**的页面：构建前在 .env.production 里设置
+//   VITE_API_BASE_URL=https://你的 BeeEVAL 公网或内网域/api
+//   VITE_SERVER_URL=https://你的 BeeEVAL 域（无路径，与 NAS 流等一致）
+// 否则同域部署仍可用默认 '/api'
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
-// Backend server URL for direct access (images, video streams, etc.)
-// This is used when bypassing the Vite proxy
-export const SERVER_URL = 'http://localhost:8004';
+export const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:8004";
 
 // API endpoints
 export const API_ENDPOINTS = {
