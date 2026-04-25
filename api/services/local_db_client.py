@@ -190,10 +190,17 @@ class LocalSupabase:
                         logger.info(f"Adding column {col_name} to evaluation_scores...")
                         cur.execute(f"ALTER TABLE evaluation_scores ADD COLUMN {col_name} TEXT")
 
-            # Reset SERIAL sequences to avoid duplicate key conflicts
+            # 校正 SERIAL 序列，避免历史数据导入后 id 冲突。
+            # PG 的 setval(seq, n) 要求 n>=1；表为空时 MAX(id) 为 NULL，
+            # 必须用三参数形式 setval(seq, 1, false) 表示「下一个 nextval 返回 1」，
+            # 否则会抛 NumericValueOutOfRange，导致 _ensure_tables 失败、API 启动崩溃。
             cur.execute("""
-                SELECT setval('evaluation_scores_id_seq',
-                       COALESCE((SELECT MAX(id) FROM evaluation_scores), 0))
+                SELECT CASE
+                    WHEN (SELECT MAX(id) FROM evaluation_scores) IS NULL
+                        THEN setval('evaluation_scores_id_seq', 1, false)
+                    ELSE setval('evaluation_scores_id_seq',
+                                (SELECT MAX(id) FROM evaluation_scores))
+                END
             """)
 
             # Migration: ensure FK constraints use ON DELETE CASCADE so that
