@@ -1,3 +1,7 @@
+# 解析本文件时，${DB_PASSWORD} / ${REDIS_PASSWORD} / ${QDRANT_API_KEY} 等必须已在环境中可用。
+# Docker Compose 会默认从「当前目录的 .env」读入；若你只有 .env.production，请二选一：
+#   cp .env.production .env
+#   docker compose --env-file .env.production -f docker-compose.production.yml <subcommand>
 version: "3.8"
 
 services:

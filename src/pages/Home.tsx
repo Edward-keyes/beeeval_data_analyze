@@ -19,7 +19,7 @@ const FolderPicker = ({
 }) => {
     const { t } = useLanguage();
     const [currentPath, setCurrentPath] = useState<string | null>(null);
-    const [dirs, setDirs] = useState<{name: string, path: string, type?: string}[]>([]);
+    const [dirs, setDirs] = useState<{ name: string, path: string, type?: string }[]>([]);
     const [loading, setLoading] = useState(false);
 
     const fetchDirs = async (path?: string | null) => {
@@ -59,9 +59,9 @@ const FolderPicker = ({
                 </div>
 
                 <div className="p-3 bg-slate-100/50 border-b border-slate-200 flex items-center gap-2 overflow-x-auto">
-                     <span className="text-slate-600 text-xs font-mono whitespace-nowrap px-2 py-1 bg-white rounded border border-slate-200 shadow-sm">
+                    <span className="text-slate-600 text-xs font-mono whitespace-nowrap px-2 py-1 bg-white rounded border border-slate-200 shadow-sm">
                         {currentPath === "My Computer" ? "选择盘符 / Select Drive" : (currentPath || "Loading...")}
-                     </span>
+                    </span>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-slate-200">
@@ -88,7 +88,7 @@ const FolderPicker = ({
                                     <FolderOpen className={clsx(
                                         "w-5 h-5 transition-colors",
                                         dir.type === 'root' ? "text-slate-400" :
-                                        dir.name === '..' ? "text-slate-400" : "text-primary-light group-hover:text-primary"
+                                            dir.name === '..' ? "text-slate-400" : "text-primary-light group-hover:text-primary"
                                     )} />
                                     <span className="text-slate-700 font-medium text-sm font-mono">{dir.name}</span>
                                     {dir.type !== 'root' && dir.name !== '..' && <ChevronRight className="w-4 h-4 ml-auto text-slate-300 group-hover:text-primary-light" />}
@@ -179,7 +179,7 @@ const Home = () => {
     };
 
     const [analysisTaskId, setAnalysisTaskId] = useState<string | null>(null);
-    const [progressMap, setProgressMap] = useState<Record<string, {status: string, progress: number, current_phase?: string}>>({});
+    const [progressMap, setProgressMap] = useState<Record<string, { status: string, progress: number, current_phase?: string }>>({});
 
     useEffect(() => {
         if (!analyzing || !analysisTaskId) return;
@@ -193,7 +193,7 @@ const Home = () => {
                 console.log('[Polling] Task status:', status.task.status);
                 console.log('[Polling] Videos:', status.videos);
 
-                const newMap: Record<string, {status: string, progress: number, current_phase?: string}> = {};
+                const newMap: Record<string, { status: string, progress: number, current_phase?: string }> = {};
 
                 // Process each video from API response
                 if (status.videos && Array.isArray(status.videos)) {
@@ -311,13 +311,13 @@ const Home = () => {
                 </div>
             </div>
 
-            <FolderPicker 
-                isOpen={showPicker} 
-                onClose={() => setShowPicker(false)} 
+            <FolderPicker
+                isOpen={showPicker}
+                onClose={() => setShowPicker(false)}
                 onSelect={(path) => {
                     setFolderPath(path);
-                    handleScan(path); 
-                }} 
+                    handleScan(path);
+                }}
             />
 
             {/* Data Table */}
@@ -364,13 +364,13 @@ const Home = () => {
                             </button>
                         </div>
                     </div>
-                    
+
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
                                     <th className="px-6 py-3 w-12 text-center">
-                                        <button 
+                                        <button
                                             onClick={() => setSelectedVideos(selectedVideos.size === videos.length ? new Set() : new Set(videos.map(v => v.name)))}
                                             className="hover:text-primary transition-colors focus:outline-none"
                                             disabled={analyzing}
@@ -386,8 +386,8 @@ const Home = () => {
                             </thead>
                             <tbody className="divide-y divide-slate-100 text-sm">
                                 {videos.map((video, idx) => (
-                                    <tr 
-                                        key={video.name} 
+                                    <tr
+                                        key={video.name}
                                         className={clsx(
                                             "group transition-colors duration-150",
                                             selectedVideos.has(video.name) ? "bg-blue-50/40" : "hover:bg-slate-50",
@@ -397,9 +397,9 @@ const Home = () => {
                                     >
                                         <td className="px-6 py-4 text-center cursor-pointer">
                                             <div className={clsx(
-                                                "w-5 h-5 rounded border flex items-center justify-center transition-all mx-auto", 
-                                                selectedVideos.has(video.name) 
-                                                    ? "bg-primary border-primary text-white shadow-sm" 
+                                                "w-5 h-5 rounded border flex items-center justify-center transition-all mx-auto",
+                                                selectedVideos.has(video.name)
+                                                    ? "bg-primary border-primary text-white shadow-sm"
                                                     : "border-slate-300 bg-white group-hover:border-primary-light"
                                             )}>
                                                 {selectedVideos.has(video.name) && <CheckSquare className="w-3.5 h-3.5" />}

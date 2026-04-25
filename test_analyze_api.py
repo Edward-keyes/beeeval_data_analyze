@@ -17,8 +17,7 @@ def test_analysis():
     # Test video path - use simple filename to avoid encoding issues
     folder_path = r"C:\测试视频"
     video_names = ["福特.mp4"]
-    # Use whisper since funasr has model registration issues
-    asr_model = "whisper"
+    asr_model = "funasr"
 
     print("=" * 60)
     print("Testing Video Analysis API")

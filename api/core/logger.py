@@ -5,8 +5,14 @@ from collections import deque
 
 # Configure logging paths
 LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "logs")
-if not os.path.exists(LOG_DIR):
-    os.makedirs(LOG_DIR)
+# 多 worker 并行 import 时会同时 makedirs，必须 exist_ok；若误存在同名文件则换目录
+if os.path.exists(LOG_DIR) and not os.path.isdir(LOG_DIR):
+    LOG_DIR = os.path.join(os.environ.get("TMPDIR", "/tmp"), "beeeval-logs")
+try:
+    os.makedirs(LOG_DIR, exist_ok=True)
+except OSError:
+    LOG_DIR = os.path.join(os.environ.get("TMPDIR", "/tmp"), "beeeval-logs")
+    os.makedirs(LOG_DIR, exist_ok=True)
 
 LOG_FILE = os.path.join(LOG_DIR, "beeeval.log")
 

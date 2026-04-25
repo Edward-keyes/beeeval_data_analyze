@@ -61,7 +61,7 @@ const NASBrowser = () => {
         getASRModels().then(res => {
             setAsrModels(res.models);
             setSelectedAsr(res.default);
-        }).catch(() => {});
+        }).catch(() => { });
     }, []);
 
     const browse = useCallback(async (path?: string, offset: number = 0) => {
