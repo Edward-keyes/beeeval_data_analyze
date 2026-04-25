@@ -20,6 +20,28 @@ def _run_async(coro):
         loop.close()
 
 
+def _coerce_int_score(value, default: int = 0) -> int:
+    """把 LLM 输出的分数强制转成 1-5 的整数。
+
+    虽然 prompt 已经明确要求整数，但 LLM 偶尔会偷偷给出 4.5 / "4" / null
+    这种值。这里做最后一道兜底：四舍五入 + clamp 到 [1, 5]，0 用作"无分"。
+    """
+    if value is None:
+        return default
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return default
+    if v <= 0:
+        return default
+    rounded = int(round(v))
+    if rounded < 1:
+        return 1
+    if rounded > 5:
+        return 5
+    return rounded
+
+
 def _check_task_complete_on_failure(task_id: str):
     """
     When a video fails, check if the task as a whole is now finished
@@ -166,7 +188,10 @@ def analyze_video(self, task_id: str, video_result_id: str, video_path: str, vid
                     first_case = cases[0]
                     evaluation_data["user_question"] = first_case.get("user_question", "")
                     evaluation_data["system_response"] = first_case.get("system_response", "")
-                    evaluation_data["response_quality_score"] = first_case.get("response_quality_score", 0)
+                    # 整数化兜底：哪怕 LLM 偷偷返回 4.5 也强制转成 5（详见 _coerce_int_score）。
+                    evaluation_data["response_quality_score"] = _coerce_int_score(
+                        first_case.get("response_quality_score")
+                    )
                     evaluation_data["latency_ms"] = first_case.get("latency_ms", 0)
                     evaluation_data["summary"] = first_case.get("summary", "")
                     all_metrics = []
@@ -176,7 +201,7 @@ def analyze_video(self, task_id: str, video_result_id: str, video_path: str, vid
                                 "criteria": metric.get("metric_name", ""),
                                 "metric_code": metric.get("metric_code", ""),
                                 "category": metric.get("category", ""),
-                                "score": metric.get("score", 0),
+                                "score": _coerce_int_score(metric.get("score")),
                                 "feedback": metric.get("feedback", ""),
                                 "selection_reason": metric.get("selection_reason", ""),
                             })
@@ -206,7 +231,9 @@ def analyze_video(self, task_id: str, video_result_id: str, video_path: str, vid
                 "current_phase": "Completed",
                 "user_question": evaluation_data.get("user_question", ""),
                 "system_response": evaluation_data.get("system_response", ""),
-                "response_quality_score": evaluation_data.get("response_quality_score", 0),
+                "response_quality_score": _coerce_int_score(
+                    evaluation_data.get("response_quality_score")
+                ),
                 "latency_ms": evaluation_data.get("latency_ms", 0),
                 "summary": evaluation_data.get("summary", ""),
                 "screenshot_path": screenshot_path,

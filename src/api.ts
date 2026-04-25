@@ -273,3 +273,54 @@ export const updateVector = async (pointId: string, payload: Partial<VectorPoint
     const response = await api.put(`${API_ENDPOINTS.RAG_VECTORS}/${pointId}`, payload);
     return response.data;
 };
+
+// ────────────────────────────────────────────────────────────────────
+// Vehicle Aggregated Scores
+// ────────────────────────────────────────────────────────────────────
+export interface VehicleListItem {
+    brand_model: string;
+    system_version: string | null;
+    video_count: number;
+    has_cache: boolean;
+    last_computed_at: string | null;
+}
+
+export interface DimensionScore {
+    dimension_key: string;
+    avg_score: number;
+    sample_count: number;
+}
+
+export interface VehicleScoreSnapshot {
+    brand_model: string;
+    system_version: string | null;
+    last_computed_at: string | null;
+    criteria_scores: DimensionScore[];
+    function_domain_scores: DimensionScore[];
+}
+
+export const listVehiclesForAggregation = async (): Promise<VehicleListItem[]> => {
+    const response = await api.get(API_ENDPOINTS.AGGREGATION_VEHICLES);
+    return response.data;
+};
+
+export const getVehicleAggregatedScores = async (
+    brand_model: string,
+    system_version?: string | null,
+): Promise<VehicleScoreSnapshot> => {
+    const params: Record<string, string> = { brand_model };
+    if (system_version) params.system_version = system_version;
+    const response = await api.get(API_ENDPOINTS.AGGREGATION_VEHICLE, { params });
+    return response.data;
+};
+
+export const computeVehicleAggregatedScores = async (
+    brand_model: string,
+    system_version?: string | null,
+): Promise<VehicleScoreSnapshot> => {
+    const response = await api.post(API_ENDPOINTS.AGGREGATION_VEHICLE_COMPUTE, {
+        brand_model,
+        system_version: system_version || null,
+    });
+    return response.data;
+};

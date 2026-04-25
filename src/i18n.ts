@@ -92,6 +92,25 @@ const resources = {
       'retry': 'Retry',
       'vector_manager': 'Vector Manager',
 
+      // Vehicle Scores
+      'vehicle_scores': 'Vehicle Scores',
+      'vehicle_scores_desc': 'Aggregate average scores per metric and per function domain for each vehicle (brand + system version). Click "Compute" to refresh.',
+      'vehicle_scores_no_data': 'No scored videos available yet, cannot aggregate.',
+      'select_vehicle': 'Select Vehicle',
+      'last_computed_at': 'Last Computed',
+      'compute_scores': 'Compute',
+      'computing': 'Computing...',
+      'no_aggregated_yet': 'No cached scores for this vehicle yet. Click "Compute" to generate.',
+      'criteria_scores': 'Per-Metric Average',
+      'function_domain_scores': 'Per-Domain Average',
+      'metrics': 'metrics',
+      'domains': 'domains',
+      'no_domain_data': 'No function-domain grouping (video filenames may not include the domain).',
+      'view_details': 'View details',
+      'metric_name': 'Metric',
+      'avg_score': 'Avg Score',
+      'samples': 'Samples',
+
       // Common
       'edit': 'Edit',
       'save_changes': 'Save Changes',
@@ -185,6 +204,25 @@ const resources = {
       'preview': '预览',
       'retry': '重试',
       'vector_manager': '向量管理',
+
+      // Vehicle Scores
+      'vehicle_scores': '车辆评分',
+      'vehicle_scores_desc': '按车型 + 系统版本聚合每个指标和功能域的均分。点「一键计算」更新数据。',
+      'vehicle_scores_no_data': '当前还没有任何打分视频，无法生成均分。',
+      'select_vehicle': '选择车辆',
+      'last_computed_at': '上次计算',
+      'compute_scores': '一键计算',
+      'computing': '计算中…',
+      'no_aggregated_yet': '该车暂无均分缓存，请点击「一键计算」生成。',
+      'criteria_scores': '指标均分',
+      'function_domain_scores': '功能域均分',
+      'metrics': '个指标',
+      'domains': '个功能域',
+      'no_domain_data': '没有功能域分组数据（视频文件名可能未带功能域）。',
+      'view_details': '查看明细',
+      'metric_name': '指标',
+      'avg_score': '均分',
+      'samples': '样本',
 
       // Common
       'edit': '编辑',

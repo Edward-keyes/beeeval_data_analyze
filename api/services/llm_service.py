@@ -75,7 +75,7 @@ class LLMService:
    **指标选择判断标准**（根据转录内容特征匹配）：
    {metrics_definitions_prompt}
 
-3. **整体质量评分**：为每个 Case 给出一个独立的"回复质量"整体评分（1-5 分），这是基于整体感受的独立评分，不依赖于具体指标分数
+3. **整体质量评分**：为每个 Case 给出一个独立的"回复质量"整体评分（**必须是 1、2、3、4、5 之一的整数，不能出现小数如 4.5**），这是基于整体感受的独立评分，不依赖于具体指标分数
 
 4. **首响延时计算**：如果可以从转录中识别时间信息，请计算首响延时。计算公式：(系统回答开始时间 - 用户问题结束时间) × 1000，单位为毫秒
 
@@ -92,7 +92,7 @@ class LLMService:
     {{
       "user_question": "用户问题内容（完整，不要截断）",
       "system_response": "系统回答内容（完整，不要截断）",
-      "response_quality_score": 4.5,
+      "response_quality_score": 4,
       "latency_ms": 1200,
       "summary": "针对该 Case 的评价总结，重点描述回复质量",
       "ui_ux_feedback": "UI/UX 评价（如果有截图）",
@@ -101,7 +101,7 @@ class LLMService:
           "metric_code": "C33",
           "metric_name": "复杂指令识别",
           "category": "认知 - 意图识别",
-          "score": 4.0,
+          "score": 4,
           "feedback": "详细的评价反馈内容",
           "selection_reason": "解释为什么选择这个指标"
         }}
@@ -113,7 +113,7 @@ class LLMService:
 **注意事项**：
 - 如果转录中包含多组问答，请在 cases 数组中输出多个 Case
 - 每个 Case 的 matched_metrics 数组应包含 3-5 个最相关的指标
-- 所有评分都是 1-5 分制
+- **所有评分（response_quality_score 和 score）都必须是 1、2、3、4、5 之一的整数，绝对不能输出 3.5、4.0、4.5 这样带小数点的值**
 - response_quality_score 是独立评分，不与指标分数平均
 """
 

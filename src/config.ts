@@ -52,6 +52,11 @@ export const API_ENDPOINTS = {
     CHAT_QUERY: '/chat/query',
     TRANSLATE: '/translate',
 
+    // Vehicle Aggregated Scores
+    AGGREGATION_VEHICLES: '/aggregation/vehicles',
+    AGGREGATION_VEHICLE: '/aggregation/vehicle',
+    AGGREGATION_VEHICLE_COMPUTE: '/aggregation/vehicle/compute',
+
     // System
     STREAM_VIDEO: '/video/stream',
     SYSTEM_LOGS: '/system/logs',
