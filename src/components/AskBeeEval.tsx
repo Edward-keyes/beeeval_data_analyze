@@ -68,8 +68,8 @@ const AskBeeEval = () => {
         try {
             let response;
             if (useRag && vectorStats && vectorStats.total_vectors > 0) {
-                // Use RAG-enhanced query
-                response = await ragQuery(userQuery, 5);
+                // Use RAG-enhanced query (top_k=20 for richer context)
+                response = await ragQuery(userQuery, 20);
                 setMessages(prev => [...prev, {
                     role: 'assistant',
                     content: response.answer,

@@ -12,6 +12,30 @@ class Settings(BaseSettings):
     LLM_BASE_URL: str = os.getenv("LLM_BASE_URL", "https://ai.juguang.chat/v1/chat/completions")
     LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini-3-pro-preview-thinking")
 
+    # ───── Dr.bee 调试台候选模型 ─────
+    # 每个模型独立 (label, base_url, api_key, name)。
+    # base_url / api_key / name 任一为空时，前端下拉不会显示该模型。
+    # 默认（DEFAULT）兜底到现有的 LLM_BASE_URL + LLM_API_KEY + LLM_MODEL。
+    LLM_MODEL_DEFAULT_LABEL: str = os.getenv("LLM_MODEL_DEFAULT_LABEL", "Default")
+    LLM_MODEL_DEFAULT_BASE_URL: str = os.getenv("LLM_MODEL_DEFAULT_BASE_URL", "") or os.getenv("LLM_BASE_URL", "")
+    LLM_MODEL_DEFAULT_API_KEY: str = os.getenv("LLM_MODEL_DEFAULT_API_KEY", "") or os.getenv("LLM_API_KEY", "")
+    LLM_MODEL_DEFAULT_NAME: str = os.getenv("LLM_MODEL_DEFAULT_NAME", "") or os.getenv("LLM_MODEL", "")
+
+    LLM_MODEL_MIMO_LABEL: str = os.getenv("LLM_MODEL_MIMO_LABEL", "Xiaomi MiMo v2.5")
+    LLM_MODEL_MIMO_BASE_URL: str = os.getenv("LLM_MODEL_MIMO_BASE_URL", "")
+    LLM_MODEL_MIMO_API_KEY: str = os.getenv("LLM_MODEL_MIMO_API_KEY", "")
+    LLM_MODEL_MIMO_NAME: str = os.getenv("LLM_MODEL_MIMO_NAME", "")
+
+    LLM_MODEL_MINIMAX_LABEL: str = os.getenv("LLM_MODEL_MINIMAX_LABEL", "MiniMax v2.7")
+    LLM_MODEL_MINIMAX_BASE_URL: str = os.getenv("LLM_MODEL_MINIMAX_BASE_URL", "")
+    LLM_MODEL_MINIMAX_API_KEY: str = os.getenv("LLM_MODEL_MINIMAX_API_KEY", "")
+    LLM_MODEL_MINIMAX_NAME: str = os.getenv("LLM_MODEL_MINIMAX_NAME", "")
+
+    LLM_MODEL_KIMI_LABEL: str = os.getenv("LLM_MODEL_KIMI_LABEL", "Kimi K2.5")
+    LLM_MODEL_KIMI_BASE_URL: str = os.getenv("LLM_MODEL_KIMI_BASE_URL", "")
+    LLM_MODEL_KIMI_API_KEY: str = os.getenv("LLM_MODEL_KIMI_API_KEY", "")
+    LLM_MODEL_KIMI_NAME: str = os.getenv("LLM_MODEL_KIMI_NAME", "")
+
     # Moonshine ASR model configuration
     MOONSHINE_MODEL_PATH: str = os.getenv("MOONSHINE_MODEL_PATH", "")
     MOONSHINE_MODEL_ARCH: int = int(os.getenv("MOONSHINE_MODEL_ARCH", "1"))

@@ -57,6 +57,11 @@ export const API_ENDPOINTS = {
     AGGREGATION_VEHICLE: '/aggregation/vehicle',
     AGGREGATION_VEHICLE_COMPUTE: '/aggregation/vehicle/compute',
 
+    // Dr.bee 调试台
+    DRBEE_CONFIG: '/drbee/config',
+    DRBEE_QUERY: '/drbee/query',
+    DRBEE_SESSIONS: '/drbee/sessions',
+
     // System
     STREAM_VIDEO: '/video/stream',
     SYSTEM_LOGS: '/system/logs',

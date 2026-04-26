@@ -9,6 +9,8 @@ import TestCases from './pages/TestCases';
 import VectorManager from './pages/VectorManager';
 import NASBrowser from './pages/NASBrowser';
 import VehicleScores from './pages/VehicleScores';
+import DrBeeLab from './pages/DrBeeLab';
+import DrBeeSessions from './pages/DrBeeSessions';
 import AskBeeEval from './components/AskBeeEval';
 import { LanguageProvider } from './contexts/LanguageContext';
 
@@ -28,6 +30,8 @@ function App() {
               <Route path="/vector-manager" element={<VectorManager />} />
               <Route path="/nas" element={<NASBrowser />} />
               <Route path="/vehicle-scores" element={<VehicleScores />} />
+              <Route path="/drbee" element={<DrBeeLab />} />
+              <Route path="/drbee/sessions" element={<DrBeeSessions />} />
               <Route path="/settings" element={<div className="p-8">Settings (Coming Soon)</div>} />
             </Routes>
             <AskBeeEval />

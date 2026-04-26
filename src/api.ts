@@ -324,3 +324,119 @@ export const computeVehicleAggregatedScores = async (
     });
     return response.data;
 };
+
+// ────────────────────────────────────────────────────────────────────
+// Dr.bee 调试台
+// ────────────────────────────────────────────────────────────────────
+export interface DrBeeModelOption {
+    key: string;
+    label: string;
+    model_name: string;
+}
+
+export interface DrBeeConfig {
+    default_system_instruction: string;
+    default_prompt_template: string;
+    required_placeholders: string[];
+    optional_placeholders: string[];
+    models: DrBeeModelOption[];
+    default_model_key: string;
+}
+
+export interface DrBeeSource {
+    video_name: string | null;
+    video_path: string | null;
+    user_question: string | null;
+    system_response: string | null;
+    summary: string | null;
+    score: number | null;
+    brand_model: string | null;
+    system_version: string | null;
+    function_domain: string | null;
+}
+
+export interface DrBeeQueryResponse {
+    answer: string;
+    sources: DrBeeSource[];
+    model_key: string;
+    model_name: string;
+    llm_latency_ms: number;
+    total_latency_ms: number;
+    retrieved_count: number;
+}
+
+export interface DrBeeQueryRequest {
+    question: string;
+    prompt_template?: string;
+    system_instruction?: string;
+    model_key?: string;
+    top_k?: number;
+}
+
+export interface DrBeeSessionListItem {
+    id: number;
+    title: string | null;
+    model_key: string | null;
+    model_name: string;
+    user_question: string;
+    llm_latency_ms: number | null;
+    total_latency_ms: number | null;
+    top_k: number | null;
+    created_at: string;
+}
+
+export interface DrBeeSessionDetail extends DrBeeSessionListItem {
+    prompt_template: string;
+    answer: string;
+    retrieved_sources: DrBeeSource[];
+}
+
+export interface DrBeeReplayResponse {
+    original: DrBeeSessionDetail;
+    replay: DrBeeQueryResponse;
+}
+
+export const getDrBeeConfig = async (): Promise<DrBeeConfig> => {
+    const response = await api.get(API_ENDPOINTS.DRBEE_CONFIG);
+    return response.data;
+};
+
+export const drBeeQuery = async (req: DrBeeQueryRequest): Promise<DrBeeQueryResponse> => {
+    const response = await api.post(API_ENDPOINTS.DRBEE_QUERY, req);
+    return response.data;
+};
+
+export const listDrBeeSessions = async (params?: { limit?: number; offset?: number }): Promise<DrBeeSessionListItem[]> => {
+    const response = await api.get(API_ENDPOINTS.DRBEE_SESSIONS, { params });
+    return response.data;
+};
+
+export const getDrBeeSession = async (id: number): Promise<DrBeeSessionDetail> => {
+    const response = await api.get(`${API_ENDPOINTS.DRBEE_SESSIONS}/${id}`);
+    return response.data;
+};
+
+export const saveDrBeeSession = async (payload: {
+    title?: string | null;
+    prompt_template: string;
+    model_key: string;
+    model_name: string;
+    user_question: string;
+    answer: string;
+    llm_latency_ms: number;
+    total_latency_ms: number;
+    top_k: number;
+    retrieved_sources: DrBeeSource[];
+}): Promise<DrBeeSessionDetail> => {
+    const response = await api.post(API_ENDPOINTS.DRBEE_SESSIONS, payload);
+    return response.data;
+};
+
+export const deleteDrBeeSession = async (id: number): Promise<void> => {
+    await api.delete(`${API_ENDPOINTS.DRBEE_SESSIONS}/${id}`);
+};
+
+export const replayDrBeeSession = async (id: number): Promise<DrBeeReplayResponse> => {
+    const response = await api.post(`${API_ENDPOINTS.DRBEE_SESSIONS}/${id}/replay`);
+    return response.data;
+};

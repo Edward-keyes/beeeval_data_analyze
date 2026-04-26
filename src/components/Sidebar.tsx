@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, History, Settings, Activity, Database, ChevronLeft, ChevronRight, Library, Globe, HardDrive, Car } from 'lucide-react';
+import { LayoutDashboard, History, Settings, Activity, Database, ChevronLeft, ChevronRight, Library, Globe, HardDrive, Car, FlaskConical } from 'lucide-react';
 import clsx from 'clsx';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -15,6 +15,7 @@ const Sidebar = () => {
         { path: '/database', label: t('database'), icon: Database },
         { path: '/history', label: t('history'), icon: History },
         { path: '/vehicle-scores', label: t('vehicle_scores') || 'Vehicle Scores', icon: Car },
+        { path: '/drbee', label: t('drbee_lab') || 'Dr.bee Lab', icon: FlaskConical },
         { path: '/nas', label: t('nas_browser') || 'NAS Browser', icon: HardDrive },
         { path: '/vector-manager', label: t('vector_manager') || 'Vector Manager', icon: Activity },
         { path: '/settings', label: t('settings'), icon: Settings },

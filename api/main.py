@@ -21,7 +21,7 @@ if os.path.exists(ffmpeg_path):
     os.environ["IMAGEIO_FFMPEG_EXE"] = ffmpeg_path
     os.environ["FFMPEG_BINARY"] = ffmpeg_path # Also set this for safety
 
-from api.routers import video, system, chat, translation, rag, nas, aggregation
+from api.routers import video, system, chat, translation, rag, nas, aggregation, dr_bee
 
 load_dotenv()
 
@@ -67,6 +67,7 @@ app.include_router(translation.router)
 app.include_router(rag.router)
 app.include_router(nas.router)
 app.include_router(aggregation.router)
+app.include_router(dr_bee.router)
 
 @app.get("/")
 async def root():

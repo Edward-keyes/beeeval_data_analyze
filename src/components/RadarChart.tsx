@@ -77,9 +77,12 @@ const RadarChart: React.FC<RadarChartProps> = ({
         const a = angle(i);
         const x = cx + Math.cos(a) * (radius + 18);
         const y = cy + Math.sin(a) * (radius + 18);
-        // 简单的左右对齐策略：根据象限
+        // 简单的左右对齐策略：根据象限。
+        // 注意：必须显式标注成 React SVG 接受的字面量联合，
+        // 否则 TS 会推断成 string 然后 textAnchor 不收。
         const cos = Math.cos(a);
-        const anchor = cos > 0.3 ? 'start' : cos < -0.3 ? 'end' : 'middle';
+        const anchor: 'start' | 'middle' | 'end' =
+            cos > 0.3 ? 'start' : cos < -0.3 ? 'end' : 'middle';
         return { label: d.label, value: d.value, x, y, anchor };
     });
 

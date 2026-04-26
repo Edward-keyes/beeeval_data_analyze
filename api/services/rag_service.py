@@ -139,14 +139,14 @@ class RagService:
 
         return 0
 
-    def search(self, query: str, query_vector: Optional[list[float]] = None, top_k: int = 5) -> list[dict]:
+    def search(self, query: str, query_vector: Optional[list[float]] = None, top_k: int = 20) -> list[dict]:
         """
         向量检索
 
         Args:
             query: 查询文本（如未提供 query_vector 则自动生成）
             query_vector: 查询向量（可选，如未提供则自动生成）
-            top_k: 返回数量
+            top_k: 返回数量（默认 20，兼顾召回和 prompt 长度）
 
         Returns:
             相关评估结果列表

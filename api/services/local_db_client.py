@@ -203,6 +203,45 @@ class LocalSupabase:
                 END
             """)
 
+            # ----- Dr.bee 调试台保存的会话 -----
+            cur.execute("""
+                SELECT table_name FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = 'dr_bee_sessions'
+            """)
+            if not cur.fetchone():
+                logger.info("Creating dr_bee_sessions table...")
+                cur.execute("""
+                    CREATE TABLE dr_bee_sessions (
+                        id SERIAL PRIMARY KEY,
+                        title TEXT,
+                        prompt_template TEXT NOT NULL,
+                        model_key TEXT,
+                        model_name TEXT NOT NULL,
+                        user_question TEXT NOT NULL,
+                        answer TEXT,
+                        llm_latency_ms INTEGER,
+                        total_latency_ms INTEGER,
+                        top_k INTEGER,
+                        retrieved_sources JSONB,
+                        created_at TIMESTAMPTZ DEFAULT NOW()
+                    )
+                """)
+                cur.execute("CREATE INDEX idx_dr_bee_sessions_created_at ON dr_bee_sessions(created_at DESC)")
+            else:
+                cur.execute("""
+                    ALTER TABLE dr_bee_sessions
+                        ADD COLUMN IF NOT EXISTS model_key TEXT
+                """)
+
+            cur.execute("""
+                SELECT CASE
+                    WHEN (SELECT MAX(id) FROM dr_bee_sessions) IS NULL
+                        THEN setval('dr_bee_sessions_id_seq', 1, false)
+                    ELSE setval('dr_bee_sessions_id_seq',
+                                (SELECT MAX(id) FROM dr_bee_sessions))
+                END
+            """)
+
             # Migration: ensure FK constraints use ON DELETE CASCADE so that
             # deleting a task automatically removes its video_results and
             # evaluation_scores rows. Idempotent: drops the old constraint
@@ -371,7 +410,7 @@ class LocalSupabase:
                         data = [data]
 
                     all_returned = []
-                    serial_pk_tables = {'evaluation_scores'}
+                    serial_pk_tables = {'evaluation_scores', 'dr_bee_sessions'}
                     for record in data:
                         if 'id' not in record and self.table_name in ('analysis_tasks', 'video_results', 'vehicles', 'test_cases'):
                             record['id'] = str(uuid.uuid4())
