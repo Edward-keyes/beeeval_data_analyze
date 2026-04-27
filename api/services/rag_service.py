@@ -180,6 +180,121 @@ class RagService:
             "sequence": r.payload.get("sequence", "")
         } for r in results]
 
+    def search_auto(
+        self,
+        query: str,
+        query_vector: Optional[list[float]] = None,
+        min_score: Optional[float] = None,
+        pool: Optional[int] = None,
+        min_k: Optional[int] = None,
+        max_k: Optional[int] = None,
+        relative_ratio: Optional[float] = None,
+    ) -> dict:
+        """
+        自动数量检索（仅供 Dr.bee Lab 使用）。
+
+        策略：先从 Qdrant 拉 `pool` 条候选（远大于常规 top_k），再做三层过滤：
+          1) 绝对阈值：score >= min_score
+          2) 相对断崖：score >= top1_score * relative_ratio
+          3) 数量上下限：[min_k, max_k]
+
+        如果三层过滤后剩余数量 < min_k，会按 score 降序兜底补足到 min_k 条，
+        并把整体标记为 low_relevance=True，让前端明确告诉用户"样本相关度偏低"。
+
+        Returns:
+            {
+                "items": [...],          # 与 search() 返回的字典结构一致，每项多了 score
+                "top_score": float|None, # pool 中最高分（None 表示库为空）
+                "min_score_used": float, # 实际使用的绝对阈值
+                "low_relevance": bool,   # 是否触发兜底
+                "pool_size": int         # 实际拉到的候选数（有时库里就这么多）
+            }
+        """
+        from api.services.embed_service import embed_service
+
+        if min_score is None:
+            min_score = settings.RAG_MIN_SCORE_DEFAULT
+        if pool is None:
+            pool = settings.RAG_AUTO_POOL
+        if min_k is None:
+            min_k = settings.RAG_MIN_K
+        if max_k is None:
+            max_k = settings.RAG_MAX_K
+        if relative_ratio is None:
+            relative_ratio = settings.RAG_RELATIVE_RATIO
+
+        # 健壮性：min_k 不能大于 max_k；min_score 钳制到 [0, 1]。
+        min_k = max(0, min(min_k, max_k))
+        min_score = max(0.0, min(1.0, float(min_score)))
+        relative_ratio = max(0.0, min(1.0, float(relative_ratio)))
+
+        if query_vector is None:
+            query_vector = embed_service.embed(query)
+
+        candidates = self.client.query_points(
+            collection_name=self.collection_name,
+            query=query_vector,
+            limit=pool,
+        ).points
+
+        if not candidates:
+            return {
+                "items": [],
+                "top_score": None,
+                "min_score_used": min_score,
+                "low_relevance": True,
+                "pool_size": 0,
+            }
+
+        candidates_sorted = sorted(candidates, key=lambda r: r.score, reverse=True)
+        top_score = candidates_sorted[0].score
+        relative_threshold = top_score * relative_ratio
+        effective_threshold = max(min_score, relative_threshold)
+
+        kept = [r for r in candidates_sorted if r.score >= effective_threshold]
+        kept = kept[:max_k]
+
+        low_relevance = False
+        if len(kept) < min_k:
+            # 兜底：补到 min_k 条（或全部候选，如果库里就这么多）
+            kept = candidates_sorted[: max(min_k, len(kept))]
+            kept = kept[:max_k]
+            low_relevance = True
+
+        # top1 本身就在阈值之下也属于低相关（候选池可能整体偏离）
+        if top_score < min_score:
+            low_relevance = True
+
+        items = [{
+            "score": r.score,
+            "video_name": r.payload.get("video_name"),
+            "user_question": r.payload.get("user_question"),
+            "system_response": r.payload.get("system_response"),
+            "summary": r.payload.get("summary"),
+            "evaluations": r.payload.get("evaluations", []),
+            "created_at": r.payload.get("created_at", ""),
+            "case_id": r.payload.get("case_id", ""),
+            "brand_model": r.payload.get("brand_model", ""),
+            "system_version": r.payload.get("system_version", ""),
+            "function_domain": r.payload.get("function_domain", ""),
+            "scenario": r.payload.get("scenario", ""),
+            "sequence": r.payload.get("sequence", "")
+        } for r in kept]
+
+        logger.info(
+            f"[RAG auto] pool={len(candidates)} top={top_score:.3f} "
+            f"min_score={min_score:.2f} relative_threshold={relative_threshold:.3f} "
+            f"kept={len(items)} low_relevance={low_relevance}"
+        )
+
+        return {
+            "items": items,
+            "top_score": float(top_score),
+            "min_score_used": float(min_score),
+            "low_relevance": low_relevance,
+            "pool_size": len(candidates),
+        }
+
     def scroll_vectors(
         self,
         offset: str = None,

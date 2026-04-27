@@ -51,6 +51,17 @@ class Settings(BaseSettings):
     QDRANT_API_KEY: str = os.getenv("QDRANT_API_KEY", "")
     EMBEDDING_MODEL_PATH: str = os.getenv("EMBEDDING_MODEL_PATH", "")
 
+    # ───── Dr.bee 自动检索数量（auto 模式） ─────
+    # 算法：从 candidate pool 拉 RAG_AUTO_POOL 条 → 三层过滤后留下 N 条
+    # 1) 绝对阈值：score >= RAG_MIN_SCORE_DEFAULT（cosine 相似度，0.55 是 BGE-base-zh 实测中"中相关"的下限）
+    # 2) 相对断崖：score >= top1_score * RAG_RELATIVE_RATIO（防长尾噪声）
+    # 3) 数量上下限：[RAG_MIN_K, RAG_MAX_K]，过滤后 < min_k 时按 score 降序补到 min_k 并标 low_relevance
+    RAG_AUTO_POOL: int = int(os.getenv("RAG_AUTO_POOL", "50"))
+    RAG_MIN_SCORE_DEFAULT: float = float(os.getenv("RAG_MIN_SCORE_DEFAULT", "0.55"))
+    RAG_RELATIVE_RATIO: float = float(os.getenv("RAG_RELATIVE_RATIO", "0.7"))
+    RAG_MIN_K: int = int(os.getenv("RAG_MIN_K", "3"))
+    RAG_MAX_K: int = int(os.getenv("RAG_MAX_K", "50"))
+
     # Redis / Celery
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     CELERY_BROKER_URL: str = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")

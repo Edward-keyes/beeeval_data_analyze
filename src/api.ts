@@ -341,7 +341,15 @@ export interface DrBeeConfig {
     optional_placeholders: string[];
     models: DrBeeModelOption[];
     default_model_key: string;
+    /** Auto 模式默认相似度阈值（0~1） */
+    default_min_score: number;
+    /** Auto 模式兜底最小返回条数 */
+    rag_min_k: number;
+    /** Auto 模式上限条数 */
+    rag_max_k: number;
 }
+
+export type DrBeeSelectionMode = "auto" | "manual";
 
 export interface DrBeeSource {
     video_name: string | null;
@@ -363,6 +371,13 @@ export interface DrBeeQueryResponse {
     llm_latency_ms: number;
     total_latency_ms: number;
     retrieved_count: number;
+    selection_mode: DrBeeSelectionMode;
+    /** Auto 模式下实际生效的阈值；manual 时为 null */
+    min_score_used: number | null;
+    /** 候选池中 top1 的 cosine 相似度；manual 时为 null */
+    top_score: number | null;
+    /** 是否触发兜底（样本相关度偏低） */
+    low_relevance: boolean;
 }
 
 export interface DrBeeQueryRequest {
@@ -371,6 +386,8 @@ export interface DrBeeQueryRequest {
     system_instruction?: string;
     model_key?: string;
     top_k?: number;
+    selection_mode?: DrBeeSelectionMode;
+    min_score?: number | null;
 }
 
 export interface DrBeeSessionListItem {
@@ -383,6 +400,10 @@ export interface DrBeeSessionListItem {
     total_latency_ms: number | null;
     top_k: number | null;
     created_at: string;
+    selection_mode: DrBeeSelectionMode | null;
+    min_score: number | null;
+    top_score: number | null;
+    low_relevance: boolean | null;
 }
 
 export interface DrBeeSessionDetail extends DrBeeSessionListItem {
@@ -427,6 +448,10 @@ export const saveDrBeeSession = async (payload: {
     total_latency_ms: number;
     top_k: number;
     retrieved_sources: DrBeeSource[];
+    selection_mode?: DrBeeSelectionMode;
+    min_score?: number | null;
+    top_score?: number | null;
+    low_relevance?: boolean;
 }): Promise<DrBeeSessionDetail> => {
     const response = await api.post(API_ENDPOINTS.DRBEE_SESSIONS, payload);
     return response.data;

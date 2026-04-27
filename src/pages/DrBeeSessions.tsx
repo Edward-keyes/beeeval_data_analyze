@@ -205,12 +205,36 @@ const DrBeeSessions: React.FC = () => {
                                 <div className="text-xs text-slate-500 truncate" title={s.user_question}>
                                     {s.shortQ}
                                 </div>
-                                <div className="flex items-center gap-2 mt-1.5 text-[10px] text-slate-400 font-mono">
+                                <div className="flex items-center gap-2 mt-1.5 text-[10px] text-slate-400 font-mono flex-wrap">
                                     <span>{s.model_name}</span>
                                     {s.total_latency_ms !== null && (
                                         <span className="inline-flex items-center gap-0.5">
                                             <Clock className="w-3 h-3" />
                                             {s.total_latency_ms}ms
+                                        </span>
+                                    )}
+                                    {/* 检索模式 + 阈值徽标（老记录默认 manual） */}
+                                    {(s.selection_mode || 'manual') === 'auto' ? (
+                                        <span
+                                            className={
+                                                'px-1.5 py-0.5 rounded font-sans font-medium ' +
+                                                (s.low_relevance
+                                                    ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                                                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200')
+                                            }
+                                            title={(t('drbee_mode_auto') || 'auto')}
+                                        >
+                                            auto · {s.min_score !== null ? `≥${s.min_score.toFixed(2)}` : '—'}
+                                            {s.top_score !== null && (
+                                                <span className="ml-1 opacity-70">top {s.top_score.toFixed(2)}</span>
+                                            )}
+                                            {s.low_relevance && (
+                                                <span className="ml-1">⚠</span>
+                                            )}
+                                        </span>
+                                    ) : (
+                                        <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200 font-sans">
+                                            manual · K={s.top_k ?? '-'}
                                         </span>
                                     )}
                                 </div>
@@ -244,10 +268,35 @@ const DrBeeSessions: React.FC = () => {
                                             {detail.title || (t('drbee_untitled') || '（无标题）')}
                                         </h2>
                                         <div className="text-xs text-slate-500 mt-1 font-mono">
-                                            #{detail.id} · {detail.model_name} · top_k={detail.top_k} ·{' '}
+                                            #{detail.id} · {detail.model_name} ·{' '}
+                                            {(detail.selection_mode || 'manual') === 'auto' ? (
+                                                <>
+                                                    <span className={detail.low_relevance ? 'text-amber-700' : 'text-emerald-700'}>
+                                                        auto
+                                                    </span>{' '}
+                                                    · {(t('drbee_threshold') || '阈值')}=
+                                                    {detail.min_score !== null ? detail.min_score.toFixed(2) : '—'}
+                                                    {detail.top_score !== null && (
+                                                        <> · top_score={detail.top_score.toFixed(2)}</>
+                                                    )}
+                                                    {' '}· N={detail.top_k ?? '-'}
+                                                </>
+                                            ) : (
+                                                <>manual · top_k={detail.top_k ?? '-'}</>
+                                            )}{' '}
+                                            ·{' '}
                                             {(t('drbee_llm_latency') || 'LLM') + ' ' + (detail.llm_latency_ms ?? '-') + 'ms'} ·{' '}
                                             {(t('drbee_total_latency') || '总') + ' ' + (detail.total_latency_ms ?? '-') + 'ms'}
                                         </div>
+                                        {detail.low_relevance && (
+                                            <div className="mt-2 inline-flex items-start gap-1.5 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                                                <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                                <span>
+                                                    {t('drbee_low_relevance_warn') ||
+                                                        '样本相关度偏低：所有候选都低于阈值或不足兜底数量，结论仅供参考。'}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                     <button
                                         onClick={handleReplay}

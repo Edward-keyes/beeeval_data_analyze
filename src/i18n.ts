@@ -148,6 +148,16 @@ const resources = {
       'drbee_select_a_session': 'Select a session on the left to view its details',
       'drbee_untitled': '(no title)',
       'drbee_confirm_delete': 'Delete this saved session?',
+      // Auto / manual top-K
+      'drbee_retrieval_mode': 'Retrieval count',
+      'drbee_mode_auto': 'Auto',
+      'drbee_mode_manual': 'Manual',
+      'drbee_min_score': 'Min similarity',
+      'drbee_auto_hint': 'Filter by similarity; result count is clamped between min/max.',
+      'drbee_actual_retrieved': 'Retrieved',
+      'drbee_items_unit': 'items',
+      'drbee_threshold': 'threshold',
+      'drbee_low_relevance_warn': 'Low relevance: every candidate fell below the threshold or fewer than the floor were available — treat results as suggestive only.',
       'refresh': 'Refresh',
 
       // Common
@@ -300,6 +310,16 @@ const resources = {
       'drbee_select_a_session': '左侧选一条会话查看详情',
       'drbee_untitled': '（无标题）',
       'drbee_confirm_delete': '确定删除这条会话？',
+      // Auto / manual 检索数量
+      'drbee_retrieval_mode': '检索数量模式',
+      'drbee_mode_auto': '自动',
+      'drbee_mode_manual': '手动',
+      'drbee_min_score': '最低相似度阈值',
+      'drbee_auto_hint': '按相似度自动过滤；返回数量被钳制在配置的上下限之间。',
+      'drbee_actual_retrieved': '实际取了',
+      'drbee_items_unit': '条',
+      'drbee_threshold': '阈值',
+      'drbee_low_relevance_warn': '样本相关度偏低：所有候选都低于阈值或不足兜底数量，结论仅供参考。',
       'refresh': '刷新',
 
       // Common

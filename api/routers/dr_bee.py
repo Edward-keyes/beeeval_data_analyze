@@ -18,7 +18,7 @@ from __future__ import annotations
 import re
 import time
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -170,6 +170,10 @@ class ConfigResponse(BaseModel):
     optional_placeholders: List[str]
     models: List[ModelOption]
     default_model_key: str
+    # auto 模式默认参数（前端用于初始化 UI 控件）
+    default_min_score: float
+    rag_min_k: int
+    rag_max_k: int
 
 
 class QueryRequest(BaseModel):
@@ -178,6 +182,12 @@ class QueryRequest(BaseModel):
     system_instruction: Optional[str] = None
     model_key: Optional[str] = None
     top_k: int = 20
+    # auto / manual 切换：
+    # - manual：使用 top_k（保持旧行为）
+    # - auto：忽略 top_k，按 min_score + 相对断崖 + min_k/max_k 自动决定数量
+    selection_mode: Literal["auto", "manual"] = "manual"
+    # auto 模式下的最低相似度阈值（0~1），不传则使用配置中的 RAG_MIN_SCORE_DEFAULT
+    min_score: Optional[float] = None
 
 
 class SourceItem(BaseModel):
@@ -200,6 +210,11 @@ class QueryResponse(BaseModel):
     llm_latency_ms: int
     total_latency_ms: int
     retrieved_count: int
+    # auto 模式相关字段（manual 时也会回填，方便前端统一展示）
+    selection_mode: Literal["auto", "manual"]
+    min_score_used: Optional[float] = None
+    top_score: Optional[float] = None
+    low_relevance: bool = False
 
 
 class SaveSessionRequest(BaseModel):
@@ -213,6 +228,10 @@ class SaveSessionRequest(BaseModel):
     total_latency_ms: int
     top_k: int
     retrieved_sources: List[dict] = Field(default_factory=list)
+    selection_mode: Literal["auto", "manual"] = "manual"
+    min_score: Optional[float] = None
+    top_score: Optional[float] = None
+    low_relevance: bool = False
 
 
 class SessionListItem(BaseModel):
@@ -225,6 +244,10 @@ class SessionListItem(BaseModel):
     total_latency_ms: Optional[int]
     top_k: Optional[int]
     created_at: str
+    selection_mode: Optional[str] = None
+    min_score: Optional[float] = None
+    top_score: Optional[float] = None
+    low_relevance: Optional[bool] = None
 
 
 class SessionDetail(SessionListItem):
@@ -365,6 +388,11 @@ def _enrich_video_paths(sources: list[dict]) -> dict[str, str]:
 
 
 def _row_to_session_detail(row: dict) -> SessionDetail:
+    # selection_mode / min_score / top_score / low_relevance 在 ALTER TABLE 之前的旧记录里是 NULL，
+    # 这里给前端兜底成 manual / None / None / False，避免老数据破坏 UI。
+    selection_mode = row.get("selection_mode") or "manual"
+    raw_min = row.get("min_score")
+    raw_top = row.get("top_score")
     return SessionDetail(
         id=row["id"],
         title=row.get("title"),
@@ -378,6 +406,10 @@ def _row_to_session_detail(row: dict) -> SessionDetail:
         top_k=row.get("top_k"),
         retrieved_sources=row.get("retrieved_sources") or [],
         created_at=str(row.get("created_at")),
+        selection_mode=selection_mode,
+        min_score=float(raw_min) if raw_min is not None else None,
+        top_score=float(raw_top) if raw_top is not None else None,
+        low_relevance=bool(row.get("low_relevance")) if row.get("low_relevance") is not None else False,
     )
 
 
@@ -395,6 +427,9 @@ async def get_config():
         optional_placeholders=list(OPTIONAL_PLACEHOLDERS),
         models=[ModelOption(**o) for o in options],
         default_model_key=default_key,
+        default_min_score=settings.RAG_MIN_SCORE_DEFAULT,
+        rag_min_k=settings.RAG_MIN_K,
+        rag_max_k=settings.RAG_MAX_K,
     )
 
 
@@ -418,9 +453,25 @@ async def drbee_query(req: QueryRequest):
     total_t0 = time.perf_counter()
 
     # 1) 向量检索
+    #    manual：使用 req.top_k；auto：忽略 top_k，按 min_score + 相对断崖动态决定数量
+    selection_mode = req.selection_mode
+    min_score_used: Optional[float] = None
+    top_score: Optional[float] = None
+    low_relevance: bool = False
     try:
         query_vector = embed_service.embed(req.question)
-        sources = rag_service.search(req.question, query_vector, top_k=req.top_k)
+        if selection_mode == "auto":
+            auto_res = rag_service.search_auto(
+                req.question,
+                query_vector,
+                min_score=req.min_score,
+            )
+            sources = auto_res["items"]
+            min_score_used = auto_res["min_score_used"]
+            top_score = auto_res["top_score"]
+            low_relevance = bool(auto_res["low_relevance"])
+        else:
+            sources = rag_service.search(req.question, query_vector, top_k=req.top_k)
     except Exception as e:
         logger.error(f"Dr.bee retrieval failed: {e}")
         raise HTTPException(status_code=502, detail=f"向量检索失败：{e}")
@@ -534,6 +585,10 @@ async def drbee_query(req: QueryRequest):
         llm_latency_ms=llm_latency_ms,
         total_latency_ms=total_latency_ms,
         retrieved_count=len(sources),
+        selection_mode=selection_mode,
+        min_score_used=min_score_used,
+        top_score=top_score,
+        low_relevance=low_relevance,
     )
 
 
@@ -543,15 +598,20 @@ async def list_sessions(limit: int = Query(100, ge=1, le=500), offset: int = Que
     rows = supabase.raw_sql(
         """
         SELECT id, title, model_key, model_name, user_question,
-               llm_latency_ms, total_latency_ms, top_k, created_at
+               llm_latency_ms, total_latency_ms, top_k,
+               selection_mode, min_score, top_score, low_relevance,
+               created_at
         FROM dr_bee_sessions
         ORDER BY created_at DESC
         LIMIT %s OFFSET %s
         """,
         [limit, offset],
     ).data
-    return [
-        SessionListItem(
+    out: List[SessionListItem] = []
+    for r in rows:
+        raw_min = r.get("min_score")
+        raw_top = r.get("top_score")
+        out.append(SessionListItem(
             id=r["id"],
             title=r.get("title"),
             model_key=r.get("model_key"),
@@ -561,9 +621,12 @@ async def list_sessions(limit: int = Query(100, ge=1, le=500), offset: int = Que
             total_latency_ms=r.get("total_latency_ms"),
             top_k=r.get("top_k"),
             created_at=str(r.get("created_at")),
-        )
-        for r in rows
-    ]
+            selection_mode=r.get("selection_mode") or "manual",
+            min_score=float(raw_min) if raw_min is not None else None,
+            top_score=float(raw_top) if raw_top is not None else None,
+            low_relevance=bool(r.get("low_relevance")) if r.get("low_relevance") is not None else False,
+        ))
+    return out
 
 
 @router.get("/sessions/{session_id}", response_model=SessionDetail)
@@ -585,8 +648,9 @@ async def save_session(req: SaveSessionRequest):
         """
         INSERT INTO dr_bee_sessions
             (title, prompt_template, model_key, model_name, user_question, answer,
-             llm_latency_ms, total_latency_ms, top_k, retrieved_sources)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+             llm_latency_ms, total_latency_ms, top_k, retrieved_sources,
+             selection_mode, min_score, top_score, low_relevance)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING *
         """,
         [
@@ -600,6 +664,10 @@ async def save_session(req: SaveSessionRequest):
             req.total_latency_ms,
             req.top_k,
             Json(req.retrieved_sources),
+            req.selection_mode,
+            req.min_score,
+            req.top_score,
+            req.low_relevance,
         ],
     ).data
     if not rows:
@@ -630,6 +698,8 @@ async def replay_session(session_id: int):
             prompt_template=original.prompt_template,
             model_key=original.model_key,
             top_k=original.top_k or 20,
+            selection_mode=original.selection_mode or "manual",
+            min_score=original.min_score,
         )
     )
     return ReplayResponse(original=original, replay=replay)

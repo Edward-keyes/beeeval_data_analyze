@@ -223,6 +223,10 @@ class LocalSupabase:
                         total_latency_ms INTEGER,
                         top_k INTEGER,
                         retrieved_sources JSONB,
+                        selection_mode TEXT,           -- 'auto' | 'manual'
+                        min_score NUMERIC(4,3),         -- 用户选定 / 实际生效阈值
+                        top_score NUMERIC(4,3),         -- 当时 pool 里 top1 分
+                        low_relevance BOOLEAN,          -- 是否触发兜底（样本相关度偏低）
                         created_at TIMESTAMPTZ DEFAULT NOW()
                     )
                 """)
@@ -230,7 +234,11 @@ class LocalSupabase:
             else:
                 cur.execute("""
                     ALTER TABLE dr_bee_sessions
-                        ADD COLUMN IF NOT EXISTS model_key TEXT
+                        ADD COLUMN IF NOT EXISTS model_key TEXT,
+                        ADD COLUMN IF NOT EXISTS selection_mode TEXT,
+                        ADD COLUMN IF NOT EXISTS min_score NUMERIC(4,3),
+                        ADD COLUMN IF NOT EXISTS top_score NUMERIC(4,3),
+                        ADD COLUMN IF NOT EXISTS low_relevance BOOLEAN
                 """)
 
             cur.execute("""

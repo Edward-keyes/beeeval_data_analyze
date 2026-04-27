@@ -17,6 +17,7 @@ import {
 import {
     DrBeeConfig,
     DrBeeQueryResponse,
+    DrBeeSelectionMode,
     DrBeeSource,
     drBeeQuery,
     getDrBeeConfig,
@@ -25,6 +26,7 @@ import {
 import VideoPlayerModal from '../components/VideoPlayerModal';
 
 const TOP_K_DEFAULT = 20;
+const MIN_SCORE_FALLBACK = 0.55;
 
 const DrBeeLab: React.FC = () => {
     const { t } = useTranslation();
@@ -37,6 +39,8 @@ const DrBeeLab: React.FC = () => {
     const [promptTemplate, setPromptTemplate] = useState('');
     const [modelKey, setModelKey] = useState('');
     const [topK, setTopK] = useState(TOP_K_DEFAULT);
+    const [selectionMode, setSelectionMode] = useState<DrBeeSelectionMode>('manual');
+    const [minScore, setMinScore] = useState<number>(MIN_SCORE_FALLBACK);
     const [question, setQuestion] = useState('');
 
     const [response, setResponse] = useState<DrBeeQueryResponse | null>(null);
@@ -59,6 +63,9 @@ const DrBeeLab: React.FC = () => {
                 setSystemInstruction(cfg.default_system_instruction);
                 setPromptTemplate(cfg.default_prompt_template);
                 setModelKey(cfg.default_model_key || (cfg.models[0]?.key ?? ''));
+                if (typeof cfg.default_min_score === 'number') {
+                    setMinScore(cfg.default_min_score);
+                }
             })
             .catch((err) => {
                 if (!mounted) return;
@@ -90,6 +97,8 @@ const DrBeeLab: React.FC = () => {
                 system_instruction: systemInstruction,
                 model_key: modelKey,
                 top_k: topK,
+                selection_mode: selectionMode,
+                min_score: selectionMode === 'auto' ? minScore : null,
             });
             setResponse(res);
         } catch (err: any) {
@@ -113,8 +122,13 @@ const DrBeeLab: React.FC = () => {
                 answer: response.answer,
                 llm_latency_ms: response.llm_latency_ms,
                 total_latency_ms: response.total_latency_ms,
-                top_k: topK,
+                // auto 模式 top_k 没意义，回填实际取的条数让历史记录更直观
+                top_k: response.selection_mode === 'auto' ? response.retrieved_count : topK,
                 retrieved_sources: response.sources,
+                selection_mode: response.selection_mode,
+                min_score: response.min_score_used,
+                top_score: response.top_score,
+                low_relevance: response.low_relevance,
             });
             setSaveMsg(t('drbee_save_success') || '已保存');
             setSaveTitle('');
@@ -131,6 +145,8 @@ const DrBeeLab: React.FC = () => {
         setPromptTemplate(config.default_prompt_template);
         setModelKey(config.default_model_key);
         setTopK(TOP_K_DEFAULT);
+        setSelectionMode('manual');
+        setMinScore(config.default_min_score ?? MIN_SCORE_FALLBACK);
     };
 
     return (
@@ -194,45 +210,113 @@ const DrBeeLab: React.FC = () => {
                             </button>
                         </div>
 
-                        {/* Model + topK */}
-                        <div className="grid grid-cols-3 gap-3">
-                            <div className="col-span-2">
-                                <label className="text-xs font-medium text-slate-600 mb-1 block">
-                                    {t('drbee_model') || 'LLM 基模'}
-                                </label>
-                                <select
-                                    value={modelKey}
-                                    onChange={(e) => setModelKey(e.target.value)}
-                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                                    disabled={config.models.length === 0}
-                                >
-                                    {config.models.length === 0 ? (
-                                        <option value="">
-                                            {t('drbee_no_model') || '⚠ .env 里还没配齐任何模型'}
+                        {/* Model + retrieval mode */}
+                        <div>
+                            <label className="text-xs font-medium text-slate-600 mb-1 block">
+                                {t('drbee_model') || 'LLM 基模'}
+                            </label>
+                            <select
+                                value={modelKey}
+                                onChange={(e) => setModelKey(e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                disabled={config.models.length === 0}
+                            >
+                                {config.models.length === 0 ? (
+                                    <option value="">
+                                        {t('drbee_no_model') || '⚠ .env 里还没配齐任何模型'}
+                                    </option>
+                                ) : (
+                                    config.models.map((m) => (
+                                        <option key={m.key} value={m.key}>
+                                            {m.label} — {m.model_name}
                                         </option>
-                                    ) : (
-                                        config.models.map((m) => (
-                                            <option key={m.key} value={m.key}>
-                                                {m.label} — {m.model_name}
-                                            </option>
-                                        ))
-                                    )}
-                                </select>
-                            </div>
+                                    ))
+                                )}
+                            </select>
+                        </div>
+
+                        {/* Selection mode + threshold/top_k */}
+                        <div className="grid grid-cols-2 gap-3 items-end">
                             <div>
                                 <label className="text-xs font-medium text-slate-600 mb-1 block">
-                                    Top-K
+                                    {t('drbee_retrieval_mode') || '检索数量模式'}
                                 </label>
-                                <input
-                                    type="number"
-                                    min={1}
-                                    max={50}
-                                    value={topK}
-                                    onChange={(e) => setTopK(parseInt(e.target.value || '0', 10) || 1)}
-                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                                />
+                                <div
+                                    role="tablist"
+                                    aria-label={t('drbee_retrieval_mode') || 'retrieval mode'}
+                                    className="inline-flex w-full rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs font-medium"
+                                >
+                                    <button
+                                        type="button"
+                                        role="tab"
+                                        aria-selected={selectionMode === 'manual'}
+                                        onClick={() => setSelectionMode('manual')}
+                                        className={
+                                            'flex-1 px-3 py-1.5 rounded-md transition-colors ' +
+                                            (selectionMode === 'manual'
+                                                ? 'bg-white text-slate-900 shadow-sm'
+                                                : 'text-slate-500 hover:text-slate-700')
+                                        }
+                                    >
+                                        {t('drbee_mode_manual') || '手动'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        role="tab"
+                                        aria-selected={selectionMode === 'auto'}
+                                        onClick={() => setSelectionMode('auto')}
+                                        className={
+                                            'flex-1 px-3 py-1.5 rounded-md transition-colors ' +
+                                            (selectionMode === 'auto'
+                                                ? 'bg-white text-slate-900 shadow-sm'
+                                                : 'text-slate-500 hover:text-slate-700')
+                                        }
+                                    >
+                                        {t('drbee_mode_auto') || '自动'}
+                                    </button>
+                                </div>
                             </div>
+                            {selectionMode === 'manual' ? (
+                                <div>
+                                    <label className="text-xs font-medium text-slate-600 mb-1 block">
+                                        Top-K
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={config.rag_max_k || 50}
+                                        value={topK}
+                                        onChange={(e) => setTopK(parseInt(e.target.value || '0', 10) || 1)}
+                                        className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                    />
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className="text-xs font-medium text-slate-600 mb-1 block">
+                                        {t('drbee_min_score') || '最低相似度阈值'}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={1}
+                                        step={0.05}
+                                        value={minScore}
+                                        onChange={(e) => {
+                                            const v = parseFloat(e.target.value);
+                                            if (Number.isNaN(v)) return;
+                                            setMinScore(Math.max(0, Math.min(1, v)));
+                                        }}
+                                        className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+                                    />
+                                </div>
+                            )}
                         </div>
+                        {selectionMode === 'auto' && (
+                            <div className="-mt-2 text-[11px] text-slate-500 leading-snug">
+                                {t('drbee_auto_hint') ||
+                                    `自动按相似度过滤；返回数量在 [${config.rag_min_k}, ${config.rag_max_k}] 之间`}
+                            </div>
+                        )}
 
                         {/* System prompt */}
                         <div>
@@ -349,6 +433,51 @@ const DrBeeLab: React.FC = () => {
                                 <div className="px-3 py-2 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-500 font-mono break-all">
                                     {t('drbee_used_model') || '使用模型'}: {response.model_name}
                                 </div>
+
+                                {/* 检索统计：auto 模式下展示实际取了 N 条 + top_score + 阈值 */}
+                                {response.selection_mode === 'auto' ? (
+                                    <div
+                                        className={
+                                            'px-3 py-2 rounded-lg text-xs font-mono break-all border ' +
+                                            (response.low_relevance
+                                                ? 'bg-amber-50 border-amber-200 text-amber-800'
+                                                : 'bg-emerald-50 border-emerald-100 text-emerald-800')
+                                        }
+                                    >
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                            <span>
+                                                {(t('drbee_actual_retrieved') || '实际取了') + ' '}
+                                                <strong>{response.retrieved_count}</strong>{' '}
+                                                {t('drbee_items_unit') || '条'}
+                                            </span>
+                                            {response.top_score !== null && (
+                                                <span>top_score = <strong>{response.top_score.toFixed(3)}</strong></span>
+                                            )}
+                                            {response.min_score_used !== null && (
+                                                <span>
+                                                    {(t('drbee_threshold') || '阈值')} ={' '}
+                                                    <strong>{response.min_score_used.toFixed(2)}</strong>
+                                                </span>
+                                            )}
+                                        </div>
+                                        {response.low_relevance && (
+                                            <div className="mt-1 flex items-start gap-1.5 text-[11px] font-sans">
+                                                <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                                <span>
+                                                    {t('drbee_low_relevance_warn') ||
+                                                        '样本相关度偏低：所有候选都低于阈值或不足兜底数量，结论仅供参考。'}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="px-3 py-2 rounded-lg bg-slate-50 border border-slate-100 text-xs font-mono text-slate-500 break-all">
+                                        {(t('drbee_mode_manual') || '手动')} · Top-K = <strong>{topK}</strong> ·{' '}
+                                        {t('drbee_actual_retrieved') || '实际取了'}{' '}
+                                        <strong>{response.retrieved_count}</strong> {t('drbee_items_unit') || '条'}
+                                    </div>
+                                )}
+
                                 <MarkdownAnswer
                                     text={response.answer}
                                     onPlay={(path, title) => {
