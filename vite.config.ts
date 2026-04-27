@@ -33,6 +33,12 @@ export default defineConfig({
                 target: 'http://localhost:8004',
                 changeOrigin: true,
             },
+            // 视频截图直接走后端 StaticFiles。dev 模式下也把它代理到 8004，
+            // 避免前端用相对路径 /screenshots/xxx.jpg 时打到 vite 的 3000 上 404。
+            '/screenshots': {
+                target: 'http://localhost:8004',
+                changeOrigin: true,
+            },
         },
         hmr: {
             overlay: true
