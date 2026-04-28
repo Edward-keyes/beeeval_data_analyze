@@ -69,6 +69,16 @@ app.include_router(nas.router)
 app.include_router(aggregation.router)
 app.include_router(dr_bee.router)
 
+@app.on_event("shutdown")
+async def _shutdown_clients() -> None:
+    """优雅关闭长连接池，避免 reload / 退出时留下 TIME_WAIT。"""
+    try:
+        from api.services.nas_service import nas_service
+        await nas_service.aclose()
+    except Exception as e:
+        logger.warning(f"shutdown nas_service close failed: {e}")
+
+
 @app.get("/")
 async def root():
     return {"message": "BeeEVAL API is running"}

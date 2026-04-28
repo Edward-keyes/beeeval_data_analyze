@@ -234,6 +234,8 @@ backups/
 logs/
 temp_files/
 api/temp_files/
+video_cache/
+api/video_cache/
 api/llm_logs/
 .translation_cache/
 rag_test_output.txt

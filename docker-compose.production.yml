@@ -38,6 +38,9 @@ services:
       # Whisper 会把 medium.pt (~1.4GB) 缓存到 ~/.cache/whisper/。
       # 用 named volume 持久化，避免重 build 镜像后丢、并让 api/worker 共享。
       - whisper_cache:/root/.cache/whisper
+      # 视频缓存：第一次访问 NAS 视频后台 ffmpeg 重写到本地，后续秒开
+      # 大小由 .env 中的 VIDEO_CACHE_MAX_SIZE_GB 控制（默认 20GB，LRU 自动淘汰）
+      - video_cache:/app/video_cache
     networks:
       - beeeval-net
     restart: unless-stopped
@@ -172,3 +175,4 @@ volumes:
   temp_files:
   screenshots:
   whisper_cache:
+  video_cache:

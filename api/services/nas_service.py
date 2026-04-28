@@ -22,10 +22,44 @@ class NASService:
         self.video_root = settings.NAS_VIDEO_ROOT
         # browse/info/search 可能经内网穿透、大目录列表较慢；read 过短易出现「对端未发完就断连」
         self._timeout = httpx.Timeout(connect=15.0, read=120.0, write=15.0, pool=15.0)
+        # 连接池上限：一个浏览器播放 mp4 时会有多个并发 Range 请求；
+        # 多人同时观看时也要够，但又不能让进程把 NAS 打爆，64 是个折中。
+        self._limits = httpx.Limits(
+            max_connections=64,
+            max_keepalive_connections=32,
+            keepalive_expiry=60.0,
+        )
+        # 单实例长连接客户端：所有 stream/browse/search 共用，避免每次新建
+        # client 触发 TCP+TLS 握手（在 frp 内网穿透链路下握手 RTT 占大头）。
+        self._client: Optional[httpx.AsyncClient] = None
 
     @property
     def available(self) -> bool:
         return bool(self.base_url and self.token)
+
+    def _get_client(self) -> httpx.AsyncClient:
+        """惰性创建并复用 AsyncClient。
+        在 fork 之后（uvicorn workers / Celery prefork）老 client 句柄不能跨进程用，
+        所以这里只在调用时创建，第一个进入的请求建立连接池。
+        """
+        if self._client is None or self._client.is_closed:
+            self._client = httpx.AsyncClient(
+                timeout=self._timeout,
+                limits=self._limits,
+                trust_env=False,
+                http2=False,  # NAS 通常只 HTTP/1.1，开 h2 反而要 TLS ALPN 协商失败回退
+            )
+        return self._client
+
+    async def aclose(self) -> None:
+        """进程退出时调用，让连接池优雅关闭。"""
+        if self._client is not None and not self._client.is_closed:
+            try:
+                await self._client.aclose()
+            except Exception as e:
+                logger.warning(f"NASService client close error: {e}")
+            finally:
+                self._client = None
 
     def _params(self, extra: Optional[dict] = None) -> dict:
         p = {"token": self.token}
@@ -47,10 +81,10 @@ class NASService:
         if path is not None:
             extra["path"] = path
         params = self._params(extra)
-        async with httpx.AsyncClient(timeout=self._timeout, trust_env=False) as client:
-            resp = await client.get(f"{self.base_url}/api/browse", params=params)
-            resp.raise_for_status()
-            return resp.json()
+        client = self._get_client()
+        resp = await client.get(f"{self.base_url}/api/browse", params=params)
+        resp.raise_for_status()
+        return resp.json()
 
     async def search(
         self,
@@ -65,17 +99,17 @@ class NASService:
             "depth": depth,
             "limit": limit,
         })
-        async with httpx.AsyncClient(timeout=self._timeout, trust_env=False) as client:
-            resp = await client.get(f"{self.base_url}/api/search", params=params)
-            resp.raise_for_status()
-            return resp.json()
+        client = self._get_client()
+        resp = await client.get(f"{self.base_url}/api/search", params=params)
+        resp.raise_for_status()
+        return resp.json()
 
     async def info(self, path: str) -> dict:
         params = self._params({"path": path})
-        async with httpx.AsyncClient(timeout=self._timeout, trust_env=False) as client:
-            resp = await client.get(f"{self.base_url}/api/info", params=params)
-            resp.raise_for_status()
-            return resp.json()
+        client = self._get_client()
+        resp = await client.get(f"{self.base_url}/api/info", params=params)
+        resp.raise_for_status()
+        return resp.json()
 
     def get_stream_url(self, nas_path: str) -> str:
         """直连 NAS 的流播放 URL（内部使用，不暴露给前端）"""
@@ -104,13 +138,19 @@ class NASService:
         for attempt in range(1, max_retries + 1):
             try:
                 logger.info(f"Downloading NAS video (attempt {attempt}/{max_retries}): {nas_path}")
-                async with httpx.AsyncClient(timeout=download_timeout, trust_env=False) as client:
+                # 大文件下载用独立 client：避免长时间占用 stream 池；
+                # 也方便 worker 并发跑分析时各自有自己的连接，不互相 head-of-line 阻塞。
+                async with httpx.AsyncClient(
+                    timeout=download_timeout,
+                    trust_env=False,
+                    limits=httpx.Limits(max_connections=8, max_keepalive_connections=4),
+                ) as client:
                     async with client.stream("GET", f"{self.base_url}/api/download", params=params) as resp:
                         resp.raise_for_status()
                         expected_size = int(resp.headers.get("content-length", 0))
                         downloaded = 0
                         with open(local_path, "wb") as f:
-                            async for chunk in resp.aiter_bytes(chunk_size=1048576):
+                            async for chunk in resp.aiter_bytes(chunk_size=4 * 1048576):
                                 f.write(chunk)
                                 downloaded += len(chunk)
 
@@ -141,6 +181,48 @@ class NASService:
             f"NAS download failed after {max_retries} attempts for {nas_path}: {last_error}"
         )
 
+    async def download_to_path(self, nas_path: str, local_path: str, max_retries: int = 2) -> None:
+        """
+        把 NAS 视频下载到指定路径（视频缓存层用）。
+        和 download_to_temp 的区别：调用方完全控制目标位置，不写到 settings.TEMP_DIR；
+        不做去重；带较短的重试（缓存填充失败可以容忍）。
+        """
+        params = self._params({"path": nas_path})
+        download_timeout = httpx.Timeout(connect=15.0, read=600.0, write=10.0, pool=10.0)
+
+        last_error = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                async with httpx.AsyncClient(
+                    timeout=download_timeout,
+                    trust_env=False,
+                    limits=httpx.Limits(max_connections=4, max_keepalive_connections=2),
+                ) as client:
+                    async with client.stream("GET", f"{self.base_url}/api/download", params=params) as resp:
+                        resp.raise_for_status()
+                        expected = int(resp.headers.get("content-length", 0))
+                        with open(local_path, "wb") as f:
+                            async for chunk in resp.aiter_bytes(chunk_size=4 * 1048576):
+                                f.write(chunk)
+                actual = os.path.getsize(local_path)
+                if expected > 0 and actual != expected:
+                    raise IOError(f"size mismatch: expected {expected}, got {actual}")
+                return
+            except Exception as e:
+                last_error = e
+                logger.warning(
+                    f"download_to_path attempt {attempt}/{max_retries} failed for {nas_path}: {e}"
+                )
+                if os.path.exists(local_path):
+                    try:
+                        os.remove(local_path)
+                    except OSError:
+                        pass
+                if attempt < max_retries:
+                    await asyncio.sleep(2 ** attempt)
+
+        raise RuntimeError(f"download_to_path failed after {max_retries} attempts: {last_error}")
+
     async def cleanup_temp(self, local_path: str):
         """清理临时下载文件"""
         if local_path and os.path.exists(local_path) and local_path.startswith(settings.TEMP_DIR):
@@ -154,6 +236,11 @@ class NASService:
         """
         流式代理 NAS 视频。返回 (async_generator, status_code, headers)。
         支持 Range 请求（拖拽进度条）。
+
+        关键优化：
+        1) 复用实例级 AsyncClient → 多个 Range 请求走 keep-alive，省掉重复 TCP+TLS 握手
+        2) chunk_size 提到 1MB → 减少 syscall、让 TCP 拥塞窗口涨起来
+        3) 完整响应（200）写 Cache-Control，让浏览器/中间层缓存；Range 响应（206）不缓存
         """
         url = f"{self.base_url}/api/stream"
         params = self._params({"path": nas_path})
@@ -161,23 +248,34 @@ class NASService:
         if range_header:
             headers["Range"] = range_header
 
-        stream_timeout = httpx.Timeout(connect=10.0, read=120.0, write=10.0, pool=10.0)
-        client = httpx.AsyncClient(timeout=stream_timeout, trust_env=False)
+        client = self._get_client()
+        # 注意：这里只 close response，不 close client（client 是全局共享）
         req = client.build_request("GET", url, params=params, headers=headers)
         resp = await client.send(req, stream=True)
 
-        fwd_headers = {}
+        fwd_headers: dict = {}
         for key in ("content-type", "content-length", "content-range", "accept-ranges"):
             if key in resp.headers:
                 fwd_headers[key] = resp.headers[key]
+        # 让浏览器明确知道支持 Range（万一 NAS 没回这个头）
+        fwd_headers.setdefault("accept-ranges", "bytes")
+        # 缓存策略：
+        # - 200 完整响应：长缓存（视频文件名变了再换，路径相当于内容指纹）
+        # - 206 部分响应：no-store，避免缓存被截断的字节段拼回来出错
+        if resp.status_code == 206:
+            fwd_headers["cache-control"] = "no-store"
+        else:
+            fwd_headers["cache-control"] = "public, max-age=86400, immutable"
 
         async def _gen():
             try:
-                async for chunk in resp.aiter_bytes(chunk_size=262144):
+                # 1MB 一块。视频流场景 chunk 越大、syscall 越少、吞吐越高；
+                # 浏览器侧的播放并不会等整 chunk，HTTP body 一边到一边解码。
+                async for chunk in resp.aiter_bytes(chunk_size=1048576):
                     yield chunk
             finally:
+                # 只关 response，client 留给下个请求复用
                 await resp.aclose()
-                await client.aclose()
 
         return _gen(), resp.status_code, fwd_headers
 

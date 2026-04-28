@@ -70,6 +70,19 @@ class Settings(BaseSettings):
     # Optional: File storage path for temp files
     TEMP_DIR: str = os.path.join(os.getcwd(), "temp_files")
 
+    # ───── 视频本地缓存 + faststart 优化 ─────
+    # 第一次访问 NAS 视频时仍走 NAS 代理（不会变慢），同时后台下载并 ffmpeg
+    # `-movflags +faststart` 重写到本地缓存。后续访问命中缓存 → 本地磁盘直读，
+    # 拖进度条几乎瞬间响应，moov atom 在文件头让浏览器秒开。
+    #
+    # ⚠️ 在 Docker 里这个目录建议挂 named volume（见 docker-compose），
+    #    否则容器重启后缓存会全部丢，又得回源 NAS 重新填一遍。
+    VIDEO_CACHE_ENABLED: bool = os.getenv("VIDEO_CACHE_ENABLED", "true").lower() in ("1", "true", "yes", "on")
+    VIDEO_CACHE_DIR: str = os.getenv("VIDEO_CACHE_DIR", os.path.join(os.getcwd(), "video_cache"))
+    VIDEO_CACHE_MAX_SIZE_GB: float = float(os.getenv("VIDEO_CACHE_MAX_SIZE_GB", "20"))
+    # 单个视频超过这个大小就不缓存（避免几个超大原始素材吃光配额）
+    VIDEO_CACHE_PER_FILE_MAX_GB: float = float(os.getenv("VIDEO_CACHE_PER_FILE_MAX_GB", "2"))
+
     class Config:
         env_file = ".env"
 
