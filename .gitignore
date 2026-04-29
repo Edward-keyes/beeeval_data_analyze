@@ -241,7 +241,6 @@ api/llm_logs/
 rag_test_output.txt
 
 # --- Build / deploy artifacts ---
-dist/
 node_modules/
 .npm-cache/
 .vercel/
