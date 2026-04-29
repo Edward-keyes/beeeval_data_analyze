@@ -171,31 +171,24 @@ async def stream_nas_video(path: str, request: Request):
     """
     代理 NAS 视频流到前端。
 
-    优化路径：
-      1) 命中本地 video_cache → 直接 FileResponse（带 Range），毫秒级首字节
-         + 这些文件已经被 ffmpeg 重写过 moov atom（faststart），浏览器秒开
-      2) 未命中 → 沿用 NAS 代理（行为和优化前一致），同时异步触发 warm，
-         让下次访问的人享受到加速
+    设计要点：
+      1) 命中本地 video_cache → 本地 Range-aware 流，毫秒级首字节、moov 在头
+      2) 未命中 → 直接代理 NAS，**不在这里触发 warm**
+         （之前在这里触发会和实时流抢 NAS 带宽，反而把首字节拉慢，是负优化）
+         真正的 warm 触发权交给前端：当 onLoadedData 之后（说明用户真的在看），
+         前端单独调 POST /api/nas/cache/preload 把这个文件排进 warm 队列。
     """
     if not nas_service.available:
         raise HTTPException(status_code=503, detail="NAS service not configured")
 
     range_header = request.headers.get("range")
 
-    # 1. 缓存命中
     if video_cache_service.is_cached(path):
         try:
-            video_cache_service.touch(path)  # 更新 LRU atime
+            video_cache_service.touch(path)
             return _ranged_file_response(video_cache_service.cache_path(path), range_header)
         except Exception as e:
-            # 本地文件出问题就回退到 NAS 代理，下面的逻辑还能兜底
             logger.warning(f"video cache hit but read failed for {path}: {e}")
-
-    # 2. 缓存未命中：照常代理 NAS，同时后台拉取 → faststart → 入缓存
-    try:
-        await video_cache_service.schedule_warm(path)
-    except Exception as e:
-        logger.debug(f"schedule_warm failed for {path}: {e}")
 
     try:
         gen, status_code, headers = await nas_service.stream_video(path, range_header)
@@ -207,6 +200,29 @@ async def stream_nas_video(path: str, request: Request):
     except Exception as e:
         logger.error(f"NAS stream error for {path}: {e}")
         raise HTTPException(status_code=502, detail=f"NAS stream failed: {e}")
+
+
+# ──────────────────────────────────────────────────────────────────────
+# 视频缓存：preload（前端在播放器 onLoadedData 后再调，避开和实时流抢带宽）
+# ──────────────────────────────────────────────────────────────────────
+class CachePreloadRequest(BaseModel):
+    path: str
+
+
+@router.post("/cache/preload")
+async def video_cache_preload(req: CachePreloadRequest):
+    """
+    把指定 NAS 视频排进后台 warm 队列。
+
+    前端时机建议：video.onLoadedData 之后再调（说明用户真的在看，不是误点马上关）。
+    幂等：已命中或已在 warm 中的文件再调也只是 no-op。
+    """
+    if not video_cache_service.enabled:
+        return {"scheduled": False, "reason": "cache disabled"}
+    if video_cache_service.is_cached(req.path):
+        return {"scheduled": False, "reason": "already cached"}
+    await video_cache_service.schedule_warm(req.path)
+    return {"scheduled": True}
 
 
 @router.get("/cache/stats")

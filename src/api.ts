@@ -202,6 +202,19 @@ export const getNasVideoUrl = (nasPath: string): string => {
     return getNasStreamUrl(nasPath);
 };
 
+/**
+ * 让后端在「用户真的开始看了」之后，把这个 NAS 视频排进本地缓存 warm 队列。
+ * 不要在弹窗一打开就调（会和实时流抢 NAS 带宽）；推荐 onLoadedData 之后调。
+ * 后端是幂等的：已缓存或已在 warm 中的文件再调也只是 no-op。
+ */
+export const preloadNasVideo = async (nasPath: string): Promise<void> => {
+    try {
+        await api.post('/nas/cache/preload', { path: nasPath });
+    } catch {
+        // 静默失败：缓存只是优化，不影响播放
+    }
+};
+
 // RAG API functions
 export const vectorizeEvaluations = async (taskIds: string[]): Promise<{ vectorized_count: number; skipped_count: number; failed_count: number }> => {
     const response = await api.post('/rag/vectorize', { task_ids: taskIds });

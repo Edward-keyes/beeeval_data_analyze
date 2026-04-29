@@ -48,6 +48,10 @@ class VideoCacheService:
         # 进程内去重：正在 warm 的 nas_path 集合
         self._warming: set[str] = set()
         self._warming_lock = asyncio.Lock()
+        # 全局 warm 并发上限：同时只允许 N 个 warm 任务跑。再多排队等待，
+        # 避免几个用户同时点不同视频时把 NAS 带宽打爆。
+        # 从 settings 读，默认 1（最保守，串行 warm，对实时流影响最小）。
+        self._warm_sem = asyncio.Semaphore(max(1, int(getattr(settings, "VIDEO_CACHE_WARM_CONCURRENCY", 1))))
 
         if self.enabled:
             os.makedirs(self.cache_dir, exist_ok=True)
@@ -114,13 +118,18 @@ class VideoCacheService:
         asyncio.create_task(self._warm_with_release(nas_path))
 
     async def _warm_with_release(self, nas_path: str) -> None:
-        try:
-            await self._warm(nas_path)
-        except Exception as e:
-            logger.warning(f"[VideoCache] warm failed for {nas_path}: {e}")
-        finally:
-            async with self._warming_lock:
-                self._warming.discard(nas_path)
+        # 先排到信号量队列里，超过 VIDEO_CACHE_WARM_CONCURRENCY 的任务在这里等
+        async with self._warm_sem:
+            try:
+                # 等到真正能跑了再次确认还需不需要（可能在排队期间已被别人填上）
+                if self.is_cached(nas_path):
+                    return
+                await self._warm(nas_path)
+            except Exception as e:
+                logger.warning(f"[VideoCache] warm failed for {nas_path}: {e}")
+            finally:
+                async with self._warming_lock:
+                    self._warming.discard(nas_path)
 
     # ──────────────────────────────────────────────────────────────
     # 真正的下载 + 转码
@@ -204,17 +213,33 @@ class VideoCacheService:
 
     @staticmethod
     async def _run_ffmpeg_faststart(src: str, dst: str) -> tuple[int, str]:
-        """调用 ffmpeg 做 faststart 重写。-c copy 不转码，秒级完成。"""
+        """
+        调用 ffmpeg 做 faststart 重写。-c copy 不转码，秒级完成。
+
+        Linux 下用 nice + ionice 把 ffmpeg 进程的 CPU/IO 优先级压低，
+        防止它跟实时 stream / Celery worker 抢 IO。Windows 下回退到普通启动。
+        """
         ffmpeg_bin = os.environ.get("FFMPEG_BINARY") or shutil.which("ffmpeg") or "ffmpeg"
-        cmd = [
+        ffmpeg_args = [
             ffmpeg_bin,
-            "-y",                      # 覆盖
+            "-y",
             "-i", src,
-            "-c", "copy",              # 不重新编码
-            "-movflags", "+faststart", # moov 放文件头
+            "-c", "copy",
+            "-movflags", "+faststart",
             "-loglevel", "error",
             dst,
         ]
+
+        # 优先：ionice -c 3 (idle) + nice -n 19 → 几乎不抢实时任务
+        nice_bin = shutil.which("nice")
+        ionice_bin = shutil.which("ionice")
+        if nice_bin and ionice_bin:
+            cmd = [ionice_bin, "-c", "3", nice_bin, "-n", "19"] + ffmpeg_args
+        elif nice_bin:
+            cmd = [nice_bin, "-n", "19"] + ffmpeg_args
+        else:
+            cmd = ffmpeg_args
+
         proc = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.DEVNULL,

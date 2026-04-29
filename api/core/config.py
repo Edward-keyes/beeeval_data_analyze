@@ -82,6 +82,9 @@ class Settings(BaseSettings):
     VIDEO_CACHE_MAX_SIZE_GB: float = float(os.getenv("VIDEO_CACHE_MAX_SIZE_GB", "20"))
     # 单个视频超过这个大小就不缓存（避免几个超大原始素材吃光配额）
     VIDEO_CACHE_PER_FILE_MAX_GB: float = float(os.getenv("VIDEO_CACHE_PER_FILE_MAX_GB", "2"))
+    # 全局 warm 并发上限。1 = 串行（最不抢实时流带宽，推荐 frp 链路）。
+    # 网络空闲时段可以临时上调到 2-3 加快预热。
+    VIDEO_CACHE_WARM_CONCURRENCY: int = int(os.getenv("VIDEO_CACHE_WARM_CONCURRENCY", "1"))
 
     class Config:
         env_file = ".env"

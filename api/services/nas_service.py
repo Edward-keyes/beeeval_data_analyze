@@ -235,21 +235,23 @@ class NASService:
     async def stream_video(self, nas_path: str, range_header: Optional[str] = None):
         """
         流式代理 NAS 视频。返回 (async_generator, status_code, headers)。
-        支持 Range 请求（拖拽进度条）。
 
-        关键优化：
-        1) 复用实例级 AsyncClient → 多个 Range 请求走 keep-alive，省掉重复 TCP+TLS 握手
-        2) chunk_size 提到 1MB → 减少 syscall、让 TCP 拥塞窗口涨起来
-        3) 完整响应（200）写 Cache-Control，让浏览器/中间层缓存；Range 响应（206）不缓存
+        关键点：
+        1) 复用实例级 AsyncClient → 多个 Range 请求走 keep-alive，省 TCP+TLS 握手
+        2) chunk_size **必须小**（64KB）。视频流是「时延优先」不是「吞吐优先」：
+           小 chunk 让 NAS 一拿到首块就能立刻往浏览器推，video player 解析完
+           moov 立即开播。大 chunk（之前用过 1MB）会把首字节硬等到攒满才发，
+           是负优化。
+        3) Accept-Encoding: identity 阻止 NAS / 中间代理给视频上 gzip
+           （视频本来已经是压缩格式，gzip 不省字节但要 CPU 解压一遍）
         """
         url = f"{self.base_url}/api/stream"
         params = self._params({"path": nas_path})
-        headers = {}
+        headers = {"Accept-Encoding": "identity"}
         if range_header:
             headers["Range"] = range_header
 
         client = self._get_client()
-        # 注意：这里只 close response，不 close client（client 是全局共享）
         req = client.build_request("GET", url, params=params, headers=headers)
         resp = await client.send(req, stream=True)
 
@@ -257,24 +259,20 @@ class NASService:
         for key in ("content-type", "content-length", "content-range", "accept-ranges"):
             if key in resp.headers:
                 fwd_headers[key] = resp.headers[key]
-        # 让浏览器明确知道支持 Range（万一 NAS 没回这个头）
         fwd_headers.setdefault("accept-ranges", "bytes")
-        # 缓存策略：
-        # - 200 完整响应：长缓存（视频文件名变了再换，路径相当于内容指纹）
-        # - 206 部分响应：no-store，避免缓存被截断的字节段拼回来出错
         if resp.status_code == 206:
             fwd_headers["cache-control"] = "no-store"
         else:
-            fwd_headers["cache-control"] = "public, max-age=86400, immutable"
+            # 完整响应可以让浏览器缓存一天，下次同一个 video src 不再回源
+            fwd_headers["cache-control"] = "public, max-age=86400"
 
         async def _gen():
             try:
-                # 1MB 一块。视频流场景 chunk 越大、syscall 越少、吞吐越高；
-                # 浏览器侧的播放并不会等整 chunk，HTTP body 一边到一边解码。
-                async for chunk in resp.aiter_bytes(chunk_size=1048576):
+                # 64KB：让 video player 尽快拿到首块开始解析 moov。
+                # syscall 多一些不要紧，瓶颈是 NAS→服务器的链路，不是 CPU。
+                async for chunk in resp.aiter_bytes(chunk_size=65536):
                     yield chunk
             finally:
-                # 只关 response，client 留给下个请求复用
                 await resp.aclose()
 
         return _gen(), resp.status_code, fwd_headers

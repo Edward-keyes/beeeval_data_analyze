@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader2, X } from 'lucide-react';
-import { getNasVideoUrl, getVideoUrl } from '../api';
+import { getNasVideoUrl, getVideoUrl, preloadNasVideo } from '../api';
 
 interface Props {
     open: boolean;
@@ -108,6 +108,15 @@ const VideoPlayerModal: React.FC<Props> = ({ open, videoPath, title, onClose }) 
                         onWaiting={() => setPhase('buffering')}
                         onCanPlay={() => setPhase('ready')}
                         onPlaying={() => setPhase('ready')}
+                        onLoadedData={() => {
+                            // 真的有第一帧解出来了 = 用户大概率会看下去
+                            // 这时候才让后端去 warm 本地缓存（不和实时流抢带宽，
+                            // 因为请求体已经在路上 / 流早就拉起来了）。
+                            // 仅 NAS 路径需要 warm；http(s) 直链 / 本地 mp4 跳过。
+                            if (videoPath && videoPath.startsWith('/')) {
+                                preloadNasVideo(videoPath);
+                            }
+                        }}
                         onError={(e) => {
                             setPhase('error');
                             const v = e.currentTarget as HTMLVideoElement;
